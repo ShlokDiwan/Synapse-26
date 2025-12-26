@@ -2,12 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
+import { useRouter } from "next/navigation";
 import { CountdownTimer } from "./CountdownTimer";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 
 export function HeroSection() {
+  const router = useRouter();
   const titleRef = useRef<HTMLHeadingElement>(null);
   const lasersRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -120,6 +122,7 @@ export function HeroSection() {
             variant="outline"
             size="lg"
             className="group relative px-12 py-6 md:px-16 md:py-7 text-lg md:text-xl font-semibold tracking-wider bg-transparent border-2 border-white text-white rounded-none hover:bg-white hover:text-black transition-all duration-300 overflow-hidden"
+            onClick={() => router.push('/register')}
           >
             {/* Red accent bar */}
             <span className="absolute bottom-0 left-0 w-full h-1 md:h-1.5 bg-red-600 transform origin-left transition-transform duration-300 group-hover:scale-x-0" />
