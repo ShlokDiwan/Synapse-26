@@ -283,8 +283,8 @@ export default function JokerSection() {
     const cards = [
         { id: 'c1', name: 'Ace of Heart', image: '/Ace_Heart.png', day: 'Day 1', isRed: true },
         { id: 'c2', name: 'Ace of Clubs', image: '/Ace_Clubs.png', day: 'Day 2' },
-        { id: 'c3', name: 'Ace of Spades', image: '/Ace_Spades.png', day: 'Day 3' },
-        { id: 'c4', name: 'Ace of Diamond', image: '/Ace_Diamond.png', day: 'Day 4', isRed: true },
+        { id: 'c3', name: 'Ace of Diamond', image: '/Ace_Diamond.png', day: 'Day 3', isRed: true },
+        { id: 'c4', name: 'Ace of Spades', image: '/Ace_Spades.png', day: 'Day 4' },
     ];
 
     return (
@@ -367,7 +367,7 @@ export default function JokerSection() {
                             ref={jokerDotRef}
                         ></div>
 
-                        <div className="burst-zone relative w-full h-[70vh] flex justify-center items-center z-10">
+                        <div className="burst-zone relative w-full h-[70vh] pointer-events-auto flex justify-center items-center z-10">
                             {cards.map((card, index) => (
                                 <div
                                     key={card.id}
