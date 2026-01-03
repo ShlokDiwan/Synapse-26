@@ -15,6 +15,7 @@ module.exports = {
         poppins: ["var(--font-poppins)"],
         jakass: ["var(--font-jakass)"],
         roboto: ["var(--font-roboto)"],
+        'jqka': ['var(--font-jqka)', 'sans-serif'],
       },
     },
   },

@@ -12,7 +12,7 @@ import NavigationPanel from '@/components/ui/NavigationPanel';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const LETTERS = "abcdefghijklmnopqrstuvwxyz";
 const SYMBOLS = "!@#$%^&*()_+-=[]{}|;:,.<>?";
 const NUMBERS = "0123456789";
 const FIRST_PHASE_TIME = 4000;
@@ -52,7 +52,9 @@ export default function HeroSection({ onEnter }: HeroSectionProps) {
     const screenContainerRef = useRef<HTMLDivElement>(null);
     const frontScreenRef = useRef<HTMLDivElement>(null);
     const flipCardRef = useRef<HTMLDivElement>(null);
-    const titleRef = useRef<HTMLHeadingElement>(null);
+    const titleRef = useRef<HTMLHeadingElement>(null)
+    const scrollTrackRef = useRef<HTMLDivElement>(null);
+    const scrollFillRef = useRef<HTMLDivElement>(null);
     const prevOverflow = useRef<{ html: string; body: string }>({
         html: "",
         body: "",
@@ -75,20 +77,18 @@ export default function HeroSection({ onEnter }: HeroSectionProps) {
         "/RedHand2.jpeg",
         "/redcard4.png",
         "/card_center.png",
-        "/Logo_Synapse.png",
         "/Synapse_Music.mp3",
         "/inkReveal2.gif",
 
         // About section
         "/Group_9.png",
-
     ];
 
     const updateProgressText = useCallback((progress: number) => {
         if (progressTextRef.current) {
             progressTextRef.current.textContent = `Loading ${Math.round(progress * 100)}%`;
         }
-        // console.log(progress);
+
         setLoadingProgress(Math.round(progress * 100));
     }, []);
 
@@ -166,6 +166,21 @@ export default function HeroSection({ onEnter }: HeroSectionProps) {
 
         }
     }, []);
+    async function decodeImages(urls: string[]) {
+        const imageUrls = urls.filter(src =>
+            /\.(png|jpg|jpeg|gif|webp)$/i.test(src)
+        );
+
+        await Promise.all(
+            imageUrls.map(async (src) => {
+                const res = await fetch(src);
+                const blob = await res.blob();
+
+                // Forces decode + rasterization
+                await createImageBitmap(blob);
+            })
+        );
+    }
 
     const revealFill = useCallback(() => {
         updateProgressText(1);
@@ -238,18 +253,25 @@ export default function HeroSection({ onEnter }: HeroSectionProps) {
         requestAnimationFrame(drawStroke);
     }, [updateProgressText, revealFill]);
 
-    const loadAssets = useCallback(() => {
+    const loadAssets = useCallback(async () => {
         // Reset loader state
         assetsRef.current.loaded = 0;
         assetsRef.current.total = PRELOAD_ASSETS.length;
         assetsRef.current.assetProgress = 0;
         assetsRef.current.finished = false;
 
-        // Load SVG immediately (not part of progress math)
+        // 1️⃣ Start SVG loader immediately
         loadSVG().then(() => {
             assetsRef.current.strokeStartTime = Date.now();
             drawStroke();
         });
+
+        // 2️⃣ REAL preload (decode + bitmap)
+        try {
+            await decodeImages(PRELOAD_ASSETS);
+        } catch (e) {
+            console.warn("Image decode preload failed", e);
+        }
 
         const markLoaded = () => {
             assetsRef.current.loaded += 1;
@@ -260,32 +282,21 @@ export default function HeroSection({ onEnter }: HeroSectionProps) {
         };
 
         PRELOAD_ASSETS.forEach(src => {
-            // IMAGE
             if (/\.(png|jpg|jpeg|gif|svg|webp)$/i.test(src)) {
                 const img = new Image();
                 img.src = src;
-
-                if (img.complete) {
-                    markLoaded();
-                } else {
-                    img.onload = markLoaded;
-                    img.onerror = markLoaded;
-                }
+                img.complete ? markLoaded() : (img.onload = img.onerror = markLoaded);
                 return;
             }
 
-            // AUDIO / VIDEO
             if (/\.(mp3|wav|ogg|mp4|webm)$/i.test(src)) {
                 const media = document.createElement("audio");
                 media.src = src;
                 media.preload = "auto";
 
-                if (media.readyState >= 3) {
-                    markLoaded();
-                } else {
-                    media.addEventListener("canplaythrough", markLoaded, { once: true });
-                    media.addEventListener("error", markLoaded, { once: true });
-                }
+                media.readyState >= 3
+                    ? markLoaded()
+                    : media.addEventListener("canplaythrough", markLoaded, { once: true });
             }
         });
     }, [loadSVG, drawStroke]);
@@ -369,7 +380,6 @@ export default function HeroSection({ onEnter }: HeroSectionProps) {
             opacity: 0,
             ease: "none",
             onStart: () => {
-                // stop idle animation once scroll begins
                 gsap.getById("scrollHintIdle")?.kill();
             },
         }, 0.05)
@@ -417,10 +427,7 @@ export default function HeroSection({ onEnter }: HeroSectionProps) {
             .addLabel("part3Reveal")
             .set("#part3", { opacity: 1 }, "part3Reveal")
             .from(
-                [
-                    "#part3 nav .fa-bars",
-                    "#part3 .register-btn"
-                ],
+                "#part3 .register-btn",
                 {
                     x: 100,
                     opacity: 0,
@@ -430,7 +437,7 @@ export default function HeroSection({ onEnter }: HeroSectionProps) {
                 "part3Reveal+=0.4"
             )
             .from(
-                ["#part3 nav .logo", "#part3 .countdown"],
+                "#part3 .countdown",
                 {
                     x: -100,
                     opacity: 0,
@@ -450,7 +457,7 @@ export default function HeroSection({ onEnter }: HeroSectionProps) {
             ).add(() => {
                 setShowNavbar(true);
             }, "part3Reveal")
-            .to(".screen-container", {duration: 0.5})
+            .to(".screen-container", { duration: 0.5, ease: "power2.inOut" })
             .add(() => {
                 setShowNavbar(false);
             }, "part3Reveal-=0.01")
@@ -502,6 +509,21 @@ export default function HeroSection({ onEnter }: HeroSectionProps) {
             .to(".screen-container", { duration: 2, ease: "none" });
 
     }, [scrambleTween]);
+
+    const initScrollProgress = useCallback(() => {
+        ScrollTrigger.create({
+            start: 0,
+            end: () =>
+                document.documentElement.scrollHeight - window.innerHeight,
+            onUpdate: (self) => {
+                const progress = self.progress;
+
+                if (scrollFillRef.current) {
+                    scrollFillRef.current.style.height = `${(progress) * 100}%`;
+                }
+            }
+        });
+    }, []);
 
     useEffect(() => {
         if (isLoading) {
@@ -557,21 +579,23 @@ export default function HeroSection({ onEnter }: HeroSectionProps) {
         hasRunMaskRef.current = true;
         gsap.to(maskLayerRef.current, {
             duration: check ? 4 : 0.1,
-            ease: "none",
+            ease: "expo.out",
             webkitMaskSize: "cover",
             maskSize: "cover",
             onStart: () => {
-                const audio = audioRef.current;
-                if (audio && check) {
+                requestAnimationFrame(() => {
+                    const audio = audioRef.current;
+                    if (!check || !audio) return;
+                    
                     audio.muted = false;
                     audio.volume = 0;
                     audio.play().catch(() => { });
                     gsap.to(audio, {
                         volume: 1,
-                        duration: 1.2,
+                        duration: 5,
                         ease: "power2.out",
                     });
-                }
+                });
             },
             onComplete: () => {
                 if (svgContainerRef.current) {
@@ -582,6 +606,8 @@ export default function HeroSection({ onEnter }: HeroSectionProps) {
 
                 unlockScroll();
                 ScrollTrigger.refresh(true);
+
+                initScrollProgress();
                 check = false;
             }
         });
@@ -668,7 +694,22 @@ export default function HeroSection({ onEnter }: HeroSectionProps) {
                 src="/Synapse_Music.mp3"
                 preload="auto"
             />
+
+            <div
+                ref={scrollTrackRef}
+                className="fixed right-[24px] top-1/2 -translate-y-1/2 z-[9999]
+               h-[300px] w-[10px] rounded-full border border-solid border-gray-700
+               bg-gray-200 pointer-events-none transition duration-500"
+                style={{
+                    opacity: showNavbar ? 1 : 0
+                }}
+            >
+                <div
+                    ref={scrollFillRef}
+                    className="absolute top-0 left-0 w-full h-0 z-[9999]
+                   bg-red-600 rounded-full"
+                />
+            </div>
         </div >
     );
-
 }
