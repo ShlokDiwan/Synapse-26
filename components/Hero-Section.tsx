@@ -25,7 +25,7 @@ export default function HeroSection({ onEnter }: HeroSectionProps) {
     const INTRO_KEY = "synapse_has_entered";
 
     const [isLoading, setIsLoading] = useState(() => {
-        if (typeof window === "undefined") return true; 
+        if (typeof window === "undefined") return true;
         return sessionStorage.getItem(INTRO_KEY) !== "true";
     });
 
@@ -439,7 +439,7 @@ export default function HeroSection({ onEnter }: HeroSectionProps) {
                     duration: 0.6,
                     ease: "power2.out"
                 },
-                "together-=0.1" 
+                "together-=0.1"
             )
             .to(".screen-container", { rotationZ: 185, duration: 1.5, scale: 0.25, ease: "none" }, "together")
             .to(".screen-container", { rotationY: 90, duration: 1.5, ease: "none" }, "together")
@@ -609,7 +609,7 @@ export default function HeroSection({ onEnter }: HeroSectionProps) {
 
                             <div id="part3" ref={part3Ref} className={`absolute inset-0 w-full h-screen transform-[rotateY(180deg)] backface-hidden ${part3Active ? "pointer-events-auto" : "pointer-events-none"}`}>
                                 <div className="register-btn absolute bottom-[50px] right-[50px]">
-                                    <NavbarButton href="/register" variant="register">
+                                    <NavbarButton href="/auth" variant="register">
                                         Register
                                     </NavbarButton>
                                 </div>

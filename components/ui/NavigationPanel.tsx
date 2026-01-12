@@ -23,7 +23,7 @@ const navItems = [
     { name: "sponsors", link: "/sponsors" },
     { name: "terms and conditions", link: "/terms-and-conditions" },
     { name: "contact us", link: "#contact", isContact: true },
-    { name: "register", link: "/register" },
+    { name: "register", link: "/auth" },
 ];
 
 export default function NavigationPanel() {
