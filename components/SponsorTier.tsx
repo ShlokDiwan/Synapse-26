@@ -1,93 +1,104 @@
 interface SponsorTierProps {
-    title: string;
-    sponsors: { name: string }[];
-    desktopCols?: 2 | 4;
+  title: string
+  sponsors: { name: string }[]
+  desktopCols?: 2 | 4
 }
 
 export default function SponsorTier({
-    title,
-    sponsors,
-    desktopCols = 4,
+  title,
+  sponsors,
+  desktopCols = 4,
 }: SponsorTierProps) {
 
-    // Grid configuration
-    const gridCols =
-        desktopCols === 2
-            ? "grid-cols-2 md:grid-cols-2"
-            : "grid-cols-2 md:grid-cols-4";
+  const gridCols =
+    desktopCols === 2
+      ? "grid-cols-2 md:grid-cols-2"
+      : "grid-cols-2 md:grid-cols-4"
 
-    return (
-        <section className="w-full flex flex-col items-center mt-14 md:mt-20 mb-10 px-4">
+  return (
+    <section className="w-full flex flex-col items-center mt-16 md:mt-24 mb-14 px-4">
 
+      {/* Tier title */}
+      <div
+        className="
+          inline-flex
+          px-7 md:px-10
+          py-3
+          border border-white/60
+          text-white
+          text-sm md:text-base
+          font-semibold
+          uppercase
+          tracking-[0.1em]
+          rounded-[3px]
+          mb-14
+        "
+      >
+        {title}
+      </div>
+
+      {/* Sponsors grid */}
+      <div
+        className={`
+          grid
+          ${gridCols}
+          gap-x-10 md:gap-x-20
+          gap-y-16 md:gap-y-20
+          justify-items-center
+          w-full
+          max-w-[1100px]
+          mx-auto
+        `}
+      >
+        {sponsors.map((s, i) => (
+          <div key={i} className="flex flex-col items-center">
+
+            {/* Sponsor image box */}
             <div
+              className="
+                w-[180px] h-[135px]
+                sm:w-[200px] sm:h-[150px]
+                md:w-[220px] md:h-[160px]
+                bg-white
+                border border-[#333]
+                rounded-[10px]
+                shadow-md
+                flex items-center justify-center
+                overflow-hidden
+              "
+            >
+              {/* Sponsor logo goes here */}
+            </div>
+
+            {/* Name plate */}
+            <div
+              className="
+                mt-5
+                px-5 py-1.5
+                min-w-[130px]
+                max-w-[220px]
+                text-center
+                bg-transparent
+                border border-[#4A4A4A]
+                rounded-[4px]
+              "
+            >
+              <p
                 className="
-                    inline-flex
-                    px-5 md:px-7
-                    py-2
-                    border border-white/50
-                    text-white
-                    text-xs md:text-sm
-                    font-medium
-                    uppercase
-                    whitespace-nowrap
-                    tracking-[0.05em]
-                    mx-auto
-                    rounded-[2px]
-                    mb-10
+                  text-[14px] sm:text-[15px] md:text-[16px]
+                  text-white/95
+                  font-semibold
+                  leading-snug
+                  break-words
                 "
-            >
-                {title}
+              >
+                {s.name || "Name"}
+              </p>
             </div>
 
-            <div
-                className={`
-                    grid
-                    ${gridCols}
-                    gap-x-6 md:gap-x-14
-                    gap-y-10 md:gap-y-14
-                    justify-items-center
-                    w-full
-                    max-w-[800px]
-                    mx-auto
-                `}
-            >
-                {sponsors.map((s, i) => (
-                    <div key={i} className="flex flex-col items-center">
-
-                        {/* Sponsor box */}
-                        <div
-                            className="
-                                w-[130px] h-[100px]
-                                md:w-[150px] md:h-[120px]
-                                bg-white
-                                border border-[#333]
-                                rounded-[6px]
-                                shadow-sm
-                                flex items-center justify-center
-                                overflow-hidden
-                            "
-                        ></div>
-
-                        {/* Name plate */}
-                        <div
-                            className="
-                                mt-3 md:mt-4
-                                px-3 py-0.5
-                                min-w-[80px]
-                                text-center
-                                bg-transparent
-                                border border-[#4A4A4A]
-                                rounded-[2px]
-                            "
-                        >
-                            <p className="text-[10px] md:text-[12px] text-white/90 font-medium leading-tight">
-                                {s.name || "Name"}
-                            </p>
-                        </div>
-
-                    </div>
-                ))}
-            </div>
-        </section>
-    );
+          </div>
+        ))}
+      </div>
+    </section>
+  )
 }

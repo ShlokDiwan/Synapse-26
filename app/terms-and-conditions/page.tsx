@@ -65,7 +65,8 @@ export default function Terms() {
             </Navbar>
 
             <div
-                className="fixed inset-0 z-0 bg-center bg-contain bg-no-repeat"
+                className="fixed left-0 right-0 bottom-0 top-24 z-0
+             bg-center bg-contain bg-no-repeat"
                 style={{ backgroundImage: "url('/termsbg.png')" }}
             />
             <div className="fixed inset-0 z-0 bg-black/60" />
