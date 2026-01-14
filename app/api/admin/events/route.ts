@@ -1,5 +1,6 @@
 
 
+
 // eg api call
 // {
 //   "event_name": "Hackathon 2025",
@@ -24,11 +25,19 @@
 // }
 
 
-import { checkAdmin } from '@/lib/checkAdmin'
+import { checkAdminFromRequest } from '@/lib/checkAdmin'
+import { corsHeaders, handleCorsResponse, addCorsHeaders } from '@/lib/cors'
 import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 
-export async function GET() {
+// Handle CORS preflight requests
+export async function OPTIONS(request: Request) {
+  const origin = request.headers.get('origin')
+  return handleCorsResponse(origin)
+}
+
+export async function GET(request: Request) {
+  const origin = request.headers.get('origin')
   const supabase = await createClient()
 
   const { data, error } = await supabase
@@ -43,17 +52,23 @@ export async function GET() {
     .order('event_date', { ascending: true })
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    const response = NextResponse.json({ error: error.message }, { status: 500 })
+    return addCorsHeaders(response, origin)
   }
 
-  return NextResponse.json({ events: data })
+  const response = NextResponse.json({ events: data })
+  return addCorsHeaders(response, origin)
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
+  const origin = request.headers.get('origin')
 
-  if (!await checkAdmin(supabase)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  // Use token-based auth for cross-origin requests
+  const { isAdmin, supabase } = await checkAdminFromRequest(request)
+
+  if (!isAdmin || !supabase) {
+    const response = NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    return addCorsHeaders(response, origin)
   }
 
   try {
@@ -70,7 +85,7 @@ export async function POST(request: Request) {
         rulebook: body.rulebook || null,
         description: body.description || null,
         is_registration_open: body.is_registration_open ?? true,
-        is_dau_free: body.is_dau_free ?? false // <--- NEW FIELD
+        is_dau_free: body.is_dau_free ?? false
       })
       .select()
       .single()
@@ -78,9 +93,9 @@ export async function POST(request: Request) {
     if (eventError) throw eventError
 
     if (body.fees && Array.isArray(body.fees) && body.fees.length > 0) {
-      
+
       const feeInserts = body.fees.map((f: any) => ({
-        participation_type: f.type, 
+        participation_type: f.type,
         price: Number(f.price),
         min_members: Number(f.min || 1),
         max_members: Number(f.max || 1)
@@ -105,19 +120,25 @@ export async function POST(request: Request) {
       if (linkError) throw linkError
     }
 
-    return NextResponse.json({ success: true, event: eventData }, { status: 201 })
+    const response = NextResponse.json({ success: true, event: eventData }, { status: 201 })
+    return addCorsHeaders(response, origin)
 
   } catch (error: any) {
     console.error('Create Error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    const response = NextResponse.json({ error: error.message }, { status: 500 })
+    return addCorsHeaders(response, origin)
   }
 }
 
 export async function PUT(request: Request) {
-  const supabase = await createClient()
+  const origin = request.headers.get('origin')
 
-  if (!await checkAdmin(supabase)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  // Use token-based auth for cross-origin requests
+  const { isAdmin, supabase } = await checkAdminFromRequest(request)
+
+  if (!isAdmin || !supabase) {
+    const response = NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    return addCorsHeaders(response, origin)
   }
 
   try {
@@ -125,7 +146,8 @@ export async function PUT(request: Request) {
     const { event_id, fees, ...updates } = body
 
     if (!event_id) {
-      return NextResponse.json({ error: 'Event ID required' }, { status: 400 })
+      const response = NextResponse.json({ error: 'Event ID required' }, { status: 400 })
+      return addCorsHeaders(response, origin)
     }
 
     const { data: eventData, error: eventError } = await supabase
@@ -138,7 +160,7 @@ export async function PUT(request: Request) {
     if (eventError) throw eventError
 
     if (fees && Array.isArray(fees)) {
-      
+
       // 1. Find old fees linked to this event
       const { data: oldLinks } = await supabase
         .from('event_fee')
@@ -176,18 +198,24 @@ export async function PUT(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, event: eventData })
+    const response = NextResponse.json({ success: true, event: eventData })
+    return addCorsHeaders(response, origin)
 
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    const response = NextResponse.json({ error: error.message }, { status: 500 })
+    return addCorsHeaders(response, origin)
   }
 }
 
 export async function DELETE(request: Request) {
-  const supabase = await createClient()
+  const origin = request.headers.get('origin')
 
-  if (!await checkAdmin(supabase)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  // Use token-based auth for cross-origin requests
+  const { isAdmin, supabase } = await checkAdminFromRequest(request)
+
+  if (!isAdmin || !supabase) {
+    const response = NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    return addCorsHeaders(response, origin)
   }
 
   try {
@@ -195,7 +223,8 @@ export async function DELETE(request: Request) {
     const id = searchParams.get('id')
 
     if (!id) {
-      return NextResponse.json({ error: 'ID required' }, { status: 400 })
+      const response = NextResponse.json({ error: 'ID required' }, { status: 400 })
+      return addCorsHeaders(response, origin)
     }
 
     const { error } = await supabase
@@ -205,9 +234,11 @@ export async function DELETE(request: Request) {
 
     if (error) throw error
 
-    return NextResponse.json({ success: true })
+    const response = NextResponse.json({ success: true })
+    return addCorsHeaders(response, origin)
 
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    const response = NextResponse.json({ error: error.message }, { status: 500 })
+    return addCorsHeaders(response, origin)
   }
 }

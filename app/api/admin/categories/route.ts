@@ -1,128 +1,154 @@
-import { checkAdmin } from '@/lib/checkAdmin'
+import { checkAdminFromRequest } from '@/lib/checkAdmin'
+import { corsHeaders, handleCorsResponse, addCorsHeaders } from '@/lib/cors'
 import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 
-export async function GET() {
-  const supabase = await createClient()
+// Handle CORS preflight requests
+export async function OPTIONS(request: Request) {
+    const origin = request.headers.get('origin')
+    return handleCorsResponse(origin)
+}
 
-  // We select all category data (*)
-  // AND we count the related events using 'event(count)'
-  const { data, error } = await supabase
-    .from('event_category')
-    .select('*, event(count)')
-    .order('category_id', { ascending: true })
+export async function GET(request: Request) {
+    const origin = request.headers.get('origin')
+    const supabase = await createClient()
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
+    const { data, error } = await supabase
+        .from('event_category')
+        .select('*, event(count)')
+        .order('category_id', { ascending: true })
 
-  // Transformation: Supabase returns count as [{ count: 5 }]. 
-  // We clean it up for the frontend to be a simple number.
-  const formattedData = data.map((cat: any) => ({
-    ...cat,
-    event_count: cat.event?.[0]?.count || 0
-  }))
+    if (error) {
+        const response = NextResponse.json({ error: error.message }, { status: 500 })
+        return addCorsHeaders(response, origin)
+    }
 
-  return NextResponse.json({ categories: formattedData })
+    const formattedData = data.map((cat: any) => ({
+        ...cat,
+        event_count: cat.event?.[0]?.count || 0
+    }))
+
+    const response = NextResponse.json({ categories: formattedData })
+    return addCorsHeaders(response, origin)
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
+    const origin = request.headers.get('origin')
 
-  if (!await checkAdmin(supabase)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-  }
+    const { isAdmin, supabase } = await checkAdminFromRequest(request)
 
-  try {
-    const body = await request.json()
-
-    if (!body.category_name) {
-      return NextResponse.json({ error: 'Category Name is required' }, { status: 400 })
+    if (!isAdmin || !supabase) {
+        const response = NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+        return addCorsHeaders(response, origin)
     }
 
-    const { data, error } = await supabase
-      .from('event_category')
-      .insert({
-        category_name: body.category_name,
-        description: body.description || null,
-        category_image: body.category_image || null 
-      })
-      .select()
-      .single()
+    try {
+        const body = await request.json()
 
-    if (error) throw error
+        if (!body.category_name) {
+            const response = NextResponse.json({ error: 'Category Name is required' }, { status: 400 })
+            return addCorsHeaders(response, origin)
+        }
 
-    return NextResponse.json({ success: true, category: data }, { status: 201 })
+        const { data, error } = await supabase
+            .from('event_category')
+            .insert({
+                category_name: body.category_name,
+                description: body.description || null,
+                category_image: body.category_image || null
+            })
+            .select()
+            .single()
 
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
+        if (error) throw error
+
+        const response = NextResponse.json({ success: true, category: data }, { status: 201 })
+        return addCorsHeaders(response, origin)
+
+    } catch (error: any) {
+        const response = NextResponse.json({ error: error.message }, { status: 500 })
+        return addCorsHeaders(response, origin)
+    }
 }
 
 //remove category
 export async function DELETE(request: Request) {
-  const supabase = await createClient()
+    const origin = request.headers.get('origin')
 
-  if (!await checkAdmin(supabase)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-  }
+    // Use token-based auth for cross-origin requests
+    const { isAdmin, supabase } = await checkAdminFromRequest(request)
 
-  try {
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
-
-    if (!id) {
-      return NextResponse.json({ error: 'ID required' }, { status: 400 })
+    if (!isAdmin || !supabase) {
+        const response = NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+        return addCorsHeaders(response, origin)
     }
 
-    const { error } = await supabase
-      .from('event_category')
-      .delete()
-      .eq('category_id', Number(id))
+    try {
+        const { searchParams } = new URL(request.url)
+        const id = searchParams.get('id')
 
-    if (error) throw error
+        if (!id) {
+            const response = NextResponse.json({ error: 'ID required' }, { status: 400 })
+            return addCorsHeaders(response, origin)
+        }
 
-    return NextResponse.json({ success: true })
+        const { error } = await supabase
+            .from('event_category')
+            .delete()
+            .eq('category_id', Number(id))
 
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
+        if (error) throw error
+
+        const response = NextResponse.json({ success: true })
+        return addCorsHeaders(response, origin)
+
+    } catch (error: any) {
+        const response = NextResponse.json({ error: error.message }, { status: 500 })
+        return addCorsHeaders(response, origin)
+    }
 }
 
 // update category details
 export async function PUT(request: Request) {
-  const supabase = await createClient()
+    const origin = request.headers.get('origin')
 
-  if (!await checkAdmin(supabase)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-  }
+    // Use token-based auth for cross-origin requests
+    const { isAdmin, supabase } = await checkAdminFromRequest(request)
 
-  try {
-    const body = await request.json()
-
-    if (!body.category_id) {
-      return NextResponse.json({ error: 'Category ID is required' }, { status: 400 })
+    if (!isAdmin || !supabase) {
+        const response = NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+        return addCorsHeaders(response, origin)
     }
 
-    const updates: any = {}
-    
-    if (body.category_name) updates.category_name = body.category_name
-    if (body.description) updates.description = body.description
-    if (body.category_image) updates.category_image = body.category_image
+    try {
+        const body = await request.json()
 
-    const { data, error } = await supabase
-      .from('event_category')
-      .update(updates)
-      .eq('category_id', Number(body.category_id))
-      .select()
-      .single()
+        if (!body.category_id) {
+            const response = NextResponse.json({ error: 'Category ID is required' }, { status: 400 })
+            return addCorsHeaders(response, origin)
+        }
 
-    if (error) throw error
+        const updates: any = {}
 
-    return NextResponse.json({ success: true, category: data })
+        if (body.category_name) updates.category_name = body.category_name
+        if (body.description) updates.description = body.description
+        if (body.category_image) updates.category_image = body.category_image
 
-  } catch (error: any) {
-    console.error('Update Category Error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
+        const { data, error } = await supabase
+            .from('event_category')
+            .update(updates)
+            .eq('category_id', Number(body.category_id))
+            .select()
+            .single()
+
+        if (error) throw error
+
+        const response = NextResponse.json({ success: true, category: data })
+        return addCorsHeaders(response, origin)
+
+    } catch (error: any) {
+        console.error('Update Category Error:', error)
+        const response = NextResponse.json({ error: error.message }, { status: 500 })
+        return addCorsHeaders(response, origin)
+    }
 }
