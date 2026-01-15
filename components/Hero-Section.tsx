@@ -7,7 +7,7 @@ import { CountdownTimer } from './CountdownTimer';
 import {
     NavbarButton
 } from "@/components/ui/Resizable-navbar";
-// import Svg from "@/components/Svg";
+import Svg from "@/components/Svg";
 import { ChevronDown } from 'lucide-react';
 
 if (typeof window !== 'undefined') {
@@ -594,7 +594,7 @@ export default function HeroSection({ onEnter, setShowNavbar, showNavbar }: Hero
     return (
         <div>
             <div id="svgContainer" className="fixed inset-0 z-10 transition-opacity duration-2400" ref={svgContainerRef} >
-                {/* <Svg /> */}
+                <Svg />
             </div>
 
             {isLoading ? (
