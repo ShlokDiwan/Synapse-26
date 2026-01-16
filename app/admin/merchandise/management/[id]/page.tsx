@@ -3,292 +3,206 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import { AdminPageHeader } from "@/components/admin/ui/AdminSidebar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { Button } from "@/app/components/ui/button";
+import { Input } from "@/app/components/ui/input";
+import { ArrowLeft, Package, Loader2, AlertCircle } from "lucide-react";
 
-type Merchandise = {
-  id: number;
-  name: string;
-  price: number;
-  sizes: string[];
-  imageUrl: string;
-  available: boolean;
-  description: string;
-};
-
-export default function EditMerchandisePage() {
+export default function EditProductPage() {
   const router = useRouter();
   const params = useParams();
-  const merchandiseId = params.id;
+  const id = params.id as string;
 
-  const [editingMerchandise, setEditingMerchandise] = useState<Merchandise>({
-    id: 0,
-    name: "",
-    price: 0,
-    sizes: [],
-    imageUrl: "",
-    available: true,
-    description: "",
-  });
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    product_name: "",
+    price: "",
+    available_sizes: "",
+    product_image: "",
+    description: "",
+    is_available: true,
+  });
 
-  // Fetch product from API
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await fetch(
-          `/api/admin/merchandise/management/${merchandiseId}`
-        );
-        const data = await response.json();
-        if (data.product) {
-          setEditingMerchandise({
-            id: data.product.product_id,
-            name: data.product.product_name,
-            price: data.product.price,
-            sizes: data.product.available_sizes || [],
-            imageUrl: data.product.product_image || "",
-            available: data.product.is_available,
-            description: data.product.description || "",
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching product:", error);
+        const res = await fetch(`/api/admin/merchandise/management/${id}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        setFormData({
+          product_name: data.product.product_name || "",
+          price: data.product.price?.toString() || "",
+          available_sizes: data.product.available_sizes?.join(", ") || "",
+          product_image: data.product.product_image || "",
+          description: data.product.description || "",
+          is_available: data.product.is_available ?? true,
+        });
+      } catch (err: any) {
+        setError(err.message);
       } finally {
         setLoading(false);
       }
     };
     fetchProduct();
-  }, [merchandiseId]);
+  }, [id]);
 
-  const allSizes = ["XS", "S", "M", "L", "XL", "XXL", "XXXL", "Free Size"];
-
-  const handleEditSave = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingMerchandise.sizes.length === 0) {
-      if (typeof window !== "undefined") {
-        window.alert("Please select at least one size");
-      }
+    if (!formData.product_name || !formData.price) {
+      alert("Name and Price are required");
       return;
     }
 
+    setSaving(true);
     try {
-      const response = await fetch(
-        `/api/admin/merchandise/management/${merchandiseId}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            product_name: editingMerchandise.name,
-            price: editingMerchandise.price,
-            available_sizes: editingMerchandise.sizes,
-            description: editingMerchandise.description,
-            is_available: editingMerchandise.available,
-            product_image: editingMerchandise.imageUrl,
-          }),
-        }
-      );
-
-      const data = await response.json();
-      if (response.ok) {
-        router.push("/admin/merchandise/management");
-      } else {
-        alert(data.error || "Failed to update product");
-      }
-    } catch (error) {
-      console.error("Error updating product:", error);
-      alert("Failed to update product");
+      const res = await fetch(`/api/admin/merchandise/management/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_name: formData.product_name,
+          price: Number(formData.price),
+          available_sizes: formData.available_sizes ? formData.available_sizes.split(",").map(s => s.trim()) : null,
+          product_image: formData.product_image || null,
+          description: formData.description || null,
+          is_available: formData.is_available,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      alert("Product updated successfully!");
+      router.push("/admin/merchandise/management");
+    } catch (err: any) {
+      alert("Failed to update product: " + err.message);
+    } finally {
+      setSaving(false);
     }
   };
 
-  const toggleSize = (size: string) => {
-    const currentSizes = editingMerchandise.sizes;
-    const newSizes = currentSizes.includes(size)
-      ? currentSizes.filter((s) => s !== size)
-      : [...currentSizes, size];
-    setEditingMerchandise({ ...editingMerchandise, sizes: newSizes });
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 gap-4">
+        <AlertCircle className="h-12 w-12 text-red-500" />
+        <p className="text-lg text-muted-foreground">Error: {error}</p>
+        <Link href="/admin/merchandise/management">
+          <Button variant="outline">Back to Products</Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <Link
-            href="/admin/merchandise/management"
-            className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-indigo-700 hover:text-indigo-800"
-          >
-            ← Back to Merchandise
+    <div className="space-y-6 pb-8">
+      <AdminPageHeader
+        title="Edit Product"
+        subtitle="Merchandise"
+        actions={
+          <Link href="/admin/merchandise/management">
+            <Button variant="outline" className="border-border/50">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
           </Link>
-          <h1 className="text-3xl font-bold text-slate-900">Edit Product</h1>
-        </div>
-      </header>
+        }
+      />
 
-      {/* Edit Form */}
-      {loading ? (
-        <div className="flex min-h-[400px] items-center justify-center rounded-2xl border border-indigo-100 bg-white/90 shadow-lg">
-          <div className="text-center">
-            <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent"></div>
-            <p className="text-sm text-slate-600">Loading product...</p>
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-indigo-100 bg-white/90 p-6 shadow-lg backdrop-blur">
-          <div className="mb-6 flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-xl font-bold text-white">
-              ✏️
-            </span>
+      <Card className="border-border/40 max-w-2xl">
+        <CardHeader className="border-b border-border/40">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Package className="h-5 w-5 text-primary" />
+            </div>
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">
-                Product Details
-              </h2>
-              <p className="text-sm text-slate-600">
-                Update the information below to edit this product
-              </p>
+              <CardTitle>Product Details</CardTitle>
+              <CardDescription>Update product information</CardDescription>
             </div>
           </div>
-          <form
-            onSubmit={handleEditSave}
-            className="grid grid-cols-1 gap-4 md:grid-cols-2"
-          >
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Product Name
-              </label>
-              <input
-                type="text"
-                value={editingMerchandise.name}
-                onChange={(e) =>
-                  setEditingMerchandise({
-                    ...editingMerchandise,
-                    name: e.target.value,
-                  })
-                }
-                className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                required
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Price (₹)
-              </label>
-              <input
-                type="number"
-                value={editingMerchandise.price}
-                onChange={(e) =>
-                  setEditingMerchandise({
-                    ...editingMerchandise,
-                    price: parseFloat(e.target.value),
-                  })
-                }
-                className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                required
-              />
-            </div>
-
-            {/* Sizes Selection */}
-            <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Available Sizes
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {allSizes.map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => toggleSize(size)}
-                    className={`rounded-lg border-2 px-4 py-2 text-sm font-semibold transition ${
-                      editingMerchandise.sizes.includes(size)
-                        ? "border-indigo-600 bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md"
-                        : "border-slate-300 bg-white text-slate-700 hover:border-indigo-400 hover:bg-indigo-50"
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-              <p className="mt-2 text-xs text-slate-500">
-                Selected: {editingMerchandise.sizes.join(", ") || "None"}
-              </p>
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Product Image
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                className="block w-full cursor-pointer rounded-lg border border-slate-200 text-sm text-slate-500 shadow-sm file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-gradient-to-r file:from-indigo-50 file:to-purple-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:from-indigo-100 hover:file:to-purple-100"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Description
-              </label>
-              <textarea
-                value={editingMerchandise.description}
-                onChange={(e) =>
-                  setEditingMerchandise({
-                    ...editingMerchandise,
-                    description: e.target.value,
-                  })
-                }
-                className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                rows={4}
-              />
-            </div>
-
-            {/* Availability Toggle */}
-            <div className="md:col-span-2 flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <span className="text-sm font-semibold text-slate-700">
-                Stock Status
-              </span>
-              <button
-                type="button"
-                onClick={() =>
-                  setEditingMerchandise({
-                    ...editingMerchandise,
-                    available: !editingMerchandise.available,
-                  })
-                }
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  editingMerchandise.available ? "bg-green-500" : "bg-red-500"
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
-                    editingMerchandise.available
-                      ? "translate-x-6"
-                      : "translate-x-1"
-                  }`}
+        </CardHeader>
+        <CardContent className="pt-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Product Name *</label>
+                <Input
+                  value={formData.product_name}
+                  onChange={(e) => setFormData({ ...formData, product_name: e.target.value })}
+                  required
+                  className="bg-muted/50 border-border/50"
                 />
-              </button>
-              <span
-                className={`text-xs font-semibold ${
-                  editingMerchandise.available
-                    ? "text-green-600"
-                    : "text-red-600"
-                }`}
-              >
-                {editingMerchandise.available ? "In Stock" : "Out of Stock"}
-              </span>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Price (₹) *</label>
+                <Input
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  required
+                  className="bg-muted/50 border-border/50"
+                />
+              </div>
             </div>
 
-            <div className="md:col-span-2 flex justify-end gap-3 border-t border-slate-200 pt-4">
-              <Link
-                href="/admin/merchandise/management"
-                className="rounded-lg border border-slate-200 px-6 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Cancel
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Available Sizes (comma-separated)</label>
+              <Input
+                value={formData.available_sizes}
+                onChange={(e) => setFormData({ ...formData, available_sizes: e.target.value })}
+                placeholder="S, M, L, XL"
+                className="bg-muted/50 border-border/50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Product Image URL</label>
+              <Input
+                value={formData.product_image}
+                onChange={(e) => setFormData({ ...formData, product_image: e.target.value })}
+                className="bg-muted/50 border-border/50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full rounded-md border border-border/50 bg-muted/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="is_available"
+                checked={formData.is_available}
+                onChange={(e) => setFormData({ ...formData, is_available: e.target.checked })}
+                className="rounded border-border"
+              />
+              <label htmlFor="is_available" className="text-sm font-medium">Available for purchase</label>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button type="submit" disabled={saving} className="bg-primary hover:bg-primary/90">
+                {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : "Save Changes"}
+              </Button>
+              <Link href="/admin/merchandise/management">
+                <Button type="button" variant="outline" className="border-border/50">Cancel</Button>
               </Link>
-              <button
-                type="submit"
-                className="rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:from-indigo-500 hover:to-purple-500"
-              >
-                Save Changes
-              </button>
             </div>
           </form>
-        </div>
-      )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

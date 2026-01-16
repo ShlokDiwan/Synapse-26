@@ -1,194 +1,202 @@
 "use client";
 
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { AdminPageHeader } from "@/components/admin/ui/AdminSidebar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { Button } from "@/app/components/ui/button";
+import { Input } from "@/app/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
+import { ArrowLeft, Building2, Loader2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
-type Sponsor = {
-  id: number;
-  name: string;
-  tier: string;
-  customTier: string;
-  website: string;
-  logoUrl: string;
-};
-
 export default function EditSponsorPage() {
-  const params = useParams();
   const router = useRouter();
-  const sponsorId = params.id;
+  const params = useParams();
+  const id = params.id as string;
 
-  const predefinedTiers = ["Platinum", "Gold", "Silver", "Bronze"];
-  const tiers = [...predefinedTiers, "Other"];
-
-  // Mock data - in real app, fetch based on sponsorId
-  const mockSponsor = {
-    id: Number(sponsorId),
-    name: "Tech Corp",
-    tier: "Platinum",
-    website: "https://techcorp.com",
-    logoUrl: "",
-  };
-
-  // Check if tier is a predefined one or custom
-  const isCustomTier = !predefinedTiers.includes(mockSponsor.tier);
-
-  const [editingSponsor, setEditingSponsor] = useState<Sponsor>({
-    ...mockSponsor,
-    tier: isCustomTier ? "Other" : mockSponsor.tier,
-    customTier: isCustomTier ? mockSponsor.tier : "",
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    tier: "",
+    website_url: "",
+    logo_url: "",
+    description: "",
   });
 
-  const handleEditSave = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (editingSponsor.tier === "Other" && !editingSponsor.customTier.trim()) {
-      if (typeof window !== "undefined") {
-        window.alert("Please enter a custom tier name");
+  useEffect(() => {
+    const fetchSponsor = async () => {
+      try {
+        const res = await fetch(`/api/admin/sponsors/${id}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        setFormData({
+          name: data.sponsor.name || "",
+          tier: data.sponsor.tier || "",
+          website_url: data.sponsor.website_url || "",
+          logo_url: data.sponsor.logo_url || "",
+          description: data.sponsor.description || "",
+        });
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
+    };
+    fetchSponsor();
+  }, [id]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name || !formData.tier) {
+      alert("Name and Tier are required");
       return;
     }
-    const finalTier =
-      editingSponsor.tier === "Other"
-        ? editingSponsor.customTier
-        : editingSponsor.tier;
-    // TODO: Save to database/API
-    console.log("Updating sponsor:", { ...editingSponsor, tier: finalTier });
-    router.push("/admin/sponsors");
+
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/sponsors/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      alert("Sponsor updated successfully!");
+      router.push("/admin/sponsors");
+    } catch (err: any) {
+      alert("Failed to update sponsor: " + err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  return (
-    <div className="space-y-6">
-      <header>
-        <Link
-          href="/admin/sponsors"
-          className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-amber-700 hover:text-amber-800"
-        >
-          ← Back to Sponsors
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 gap-4">
+        <AlertCircle className="h-12 w-12 text-red-500" />
+        <p className="text-lg text-muted-foreground">Error: {error}</p>
+        <Link href="/admin/sponsors">
+          <Button variant="outline">Back to Sponsors</Button>
         </Link>
-        <h1 className="text-3xl font-bold text-slate-900">Edit Sponsor</h1>
-      </header>
+      </div>
+    );
+  }
 
-      {/* Edit Form */}
-      <div className="rounded-2xl border border-amber-100 bg-white/90 p-6 shadow-lg backdrop-blur">
-        <div className="mb-6 flex items-center gap-3">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-xl font-bold text-white">
-            ✏️
-          </span>
-          <div>
-            <h2 className="text-xl font-semibold text-slate-900">
-              Sponsor Details
-            </h2>
-            <p className="text-sm text-slate-600">
-              Update the information below to edit this sponsor
-            </p>
-          </div>
-        </div>
-        <form
-          onSubmit={handleEditSave}
-          className="grid grid-cols-1 gap-4 md:grid-cols-2"
-        >
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Sponsor Name
-            </label>
-            <input
-              type="text"
-              value={editingSponsor.name}
-              onChange={(e) =>
-                setEditingSponsor({ ...editingSponsor, name: e.target.value })
-              }
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Tier
-            </label>
-            <select
-              value={editingSponsor.tier}
-              onChange={(e) =>
-                setEditingSponsor({
-                  ...editingSponsor,
-                  tier: e.target.value,
-                  customTier: "",
-                })
-              }
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-            >
-              {tiers.map((tier) => (
-                <option key={tier}>{tier}</option>
-              ))}
-            </select>
-          </div>
+  return (
+    <div className="space-y-6 pb-8">
+      <AdminPageHeader
+        title="Edit Sponsor"
+        subtitle="Update Details"
+        actions={
+          <Link href="/admin/sponsors">
+            <Button variant="outline" className="border-border/50">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+          </Link>
+        }
+      />
 
-          {/* Custom Tier Input for Edit */}
-          {editingSponsor.tier === "Other" && (
-            <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Custom Tier Name
-              </label>
-              <input
-                type="text"
-                value={editingSponsor.customTier}
-                onChange={(e) =>
-                  setEditingSponsor({
-                    ...editingSponsor,
-                    customTier: e.target.value,
-                  })
-                }
-                className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                placeholder="Enter custom tier name"
-                required
+      <Card className="border-border/40 max-w-2xl">
+        <CardHeader className="border-b border-border/40">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Building2 className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle>Sponsor Details</CardTitle>
+              <CardDescription>Update sponsor information</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sponsor Name *</label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g., Tech Corp"
+                  required
+                  className="bg-muted/50 border-border/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tier *</label>
+                <Select value={formData.tier} onValueChange={(v) => setFormData({ ...formData, tier: v })}>
+                  <SelectTrigger className="bg-muted/50 border-border/50">
+                    <SelectValue placeholder="Select tier" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border">
+                    <SelectItem value="Platinum">💎 Platinum</SelectItem>
+                    <SelectItem value="Gold">🥇 Gold</SelectItem>
+                    <SelectItem value="Silver">🥈 Silver</SelectItem>
+                    <SelectItem value="Bronze">🥉 Bronze</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Website URL</label>
+              <Input
+                value={formData.website_url}
+                onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
+                placeholder="https://example.com"
+                className="bg-muted/50 border-border/50"
               />
             </div>
-          )}
 
-          <div className="md:col-span-2">
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Website URL
-            </label>
-            <input
-              type="url"
-              value={editingSponsor.website}
-              onChange={(e) =>
-                setEditingSponsor({
-                  ...editingSponsor,
-                  website: e.target.value,
-                })
-              }
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              placeholder="https://example.com"
-            />
-          </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Logo URL</label>
+              <Input
+                value={formData.logo_url}
+                onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+                placeholder="https://example.com/logo.png"
+                className="bg-muted/50 border-border/50"
+              />
+            </div>
 
-          <div className="md:col-span-2">
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Logo Upload
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              className="block w-full cursor-pointer rounded-lg border border-slate-200 text-sm text-slate-500 shadow-sm file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-gradient-to-r file:from-blue-50 file:to-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:from-blue-100 hover:file:to-indigo-100"
-            />
-          </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full rounded-md border border-border/50 bg-muted/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                rows={3}
+                placeholder="Brief description of the sponsor"
+              />
+            </div>
 
-          <div className="md:col-span-2 flex justify-end gap-3 border-t border-slate-200 pt-4">
-            <Link
-              href="/admin/sponsors"
-              className="rounded-lg border border-slate-200 px-6 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Cancel
-            </Link>
-            <button
-              type="submit"
-              className="rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:from-blue-500 hover:to-indigo-500"
-            >
-              Save Changes
-            </button>
-          </div>
-        </form>
-      </div>
+            <div className="flex gap-3 pt-4">
+              <Button type="submit" disabled={saving} className="bg-primary hover:bg-primary/90">
+                {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : "Save Changes"}
+              </Button>
+              <Link href="/admin/sponsors">
+                <Button type="button" variant="outline" className="border-border/50">Cancel</Button>
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

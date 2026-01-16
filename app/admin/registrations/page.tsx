@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRegistrations, useRegistrationEventList } from "@/hooks/use-admin-data";
 import { AdminPageHeader } from "@/components/admin/ui/AdminSidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
@@ -41,169 +42,56 @@ import {
   CheckCircle2,
   Clock,
   Ticket,
+  Loader2,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
-type Registration = {
-  id: number;
-  userName: string;
-  email: string;
-  phone: string;
-  college: string;
-  event: string;
-  category: string;
-  participationType: string;
-  teamSize: number;
-  registrationDate: string;
-  paymentMethod: string;
-  paymentStatus: string;
-  amount: number;
-  transactionId: string;
-};
-
-type GatewayCharges = {
-  [key: string]: number;
-};
-
-// Mock data
-const initialRegistrations: Registration[] = [
-  {
-    id: 1,
-    userName: "John Doe",
-    email: "john@example.com",
-    phone: "9876543210",
-    college: "ABC College",
-    event: "Hackathon 2025",
-    category: "Technical",
-    participationType: "Solo",
-    teamSize: 1,
-    registrationDate: "2025-12-10",
-    paymentMethod: "UPI",
-    paymentStatus: "Paid",
-    amount: 200,
-    transactionId: "TXN123456789",
-  },
-  {
-    id: 2,
-    userName: "Jane Smith",
-    email: "jane@example.com",
-    phone: "9876543211",
-    college: "XYZ University",
-    event: "Dance Battle",
-    category: "Cultural",
-    participationType: "Duet",
-    teamSize: 2,
-    registrationDate: "2025-12-11",
-    paymentMethod: "Credit Card",
-    paymentStatus: "Paid",
-    amount: 250,
-    transactionId: "TXN987654321",
-  },
-  {
-    id: 3,
-    userName: "Mike Johnson",
-    email: "mike@example.com",
-    phone: "9876543212",
-    college: "DEF Institute",
-    event: "Hackathon 2025",
-    category: "Technical",
-    participationType: "Group",
-    teamSize: 5,
-    registrationDate: "2025-12-12",
-    paymentMethod: "Debit Card",
-    paymentStatus: "Pending",
-    amount: 500,
-    transactionId: "TXN456789123",
-  },
-  {
-    id: 4,
-    userName: "Sarah Williams",
-    email: "sarah@example.com",
-    phone: "9876543213",
-    college: "GHI College",
-    event: "Coding Competition",
-    category: "Technical",
-    participationType: "Solo",
-    teamSize: 1,
-    registrationDate: "2025-12-13",
-    paymentMethod: "UPI",
-    paymentStatus: "Paid",
-    amount: 150,
-    transactionId: "TXN789456123",
-  },
-  {
-    id: 5,
-    userName: "Tom Brown",
-    email: "tom@example.com",
-    phone: "9876543214",
-    college: "JKL University",
-    event: "Dance Battle",
-    category: "Cultural",
-    participationType: "Group",
-    teamSize: 6,
-    registrationDate: "2025-12-14",
-    paymentMethod: "Net Banking",
-    paymentStatus: "Paid",
-    amount: 720,
-    transactionId: "TXN321654987",
-  },
-];
-
 export default function RegistrationsPage() {
-  const [registrations] = useState<Registration[]>(initialRegistrations);
   const [searchTerm, setSearchTerm] = useState("");
   const [eventFilter, setEventFilter] = useState("all");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
-  const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
-  const [isGatewaySettingsOpen, setIsGatewaySettingsOpen] = useState(false);
-  const [gatewayCharges, setGatewayCharges] = useState<GatewayCharges>({
-    UPI: 2,
-    "Credit Card": 3,
-    "Debit Card": 2.5,
-    "Net Banking": 2,
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
+  const [selectedRegistration, setSelectedRegistration] = useState<any>(null);
+  const [page, setPage] = useState(1);
+  const limit = 10;
+
+  const { data: eventListData } = useRegistrationEventList();
+  const { data, loading, error, refetch } = useRegistrations({
+    page,
+    limit,
+    searchParams: searchTerm || undefined,
+    filter: eventFilter !== "all" ? eventFilter : undefined,
+    paymentStatus: paymentStatusFilter !== "all" ? paymentStatusFilter : undefined,
+    paymentMethod: paymentMethodFilter !== "all" ? paymentMethodFilter : undefined,
   });
 
-  // Get unique events for filter
-  const allEvents = [...new Set(registrations.map((r) => r.event))];
-
-  // Filter registrations
-  const filteredRegistrations = registrations.filter((reg) => {
-    const matchesSearch =
-      reg.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reg.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reg.transactionId.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesEvent = eventFilter === "all" || reg.event === eventFilter;
-    const matchesStatus = paymentStatusFilter === "all" || reg.paymentStatus === paymentStatusFilter;
-    return matchesSearch && matchesEvent && matchesStatus;
-  });
-
-  // Calculate gateway charges
-  const calculateGatewayCharge = (amount: number, method: string) => {
-    const chargePercentage = gatewayCharges[method] || 0;
-    return (amount * chargePercentage) / 100;
+  const registrations = data?.data || [];
+  const summary = data?.summary || {
+    total_registrations: 0,
+    paid: 0,
+    gross_revenue: 0,
+    gateway_charges: 0,
+    net_revenue: 0,
   };
+  const total = data?.total || 0;
+  const totalPages = Math.ceil(total / limit);
 
-  // Calculate statistics
-  const paidRegistrations = filteredRegistrations.filter((r) => r.paymentStatus === "Paid");
-  const totalGrossRevenue = paidRegistrations.reduce((sum, r) => sum + r.amount, 0);
-  const totalGatewayCharges = paidRegistrations.reduce(
-    (sum, r) => sum + calculateGatewayCharge(r.amount, r.paymentMethod),
-    0
-  );
-  const totalNetRevenue = totalGrossRevenue - totalGatewayCharges;
-  const paidCount = paidRegistrations.length;
-  const pendingCount = filteredRegistrations.filter((r) => r.paymentStatus === "Pending").length;
+  const allEvents = eventListData?.events || [];
+  const paymentMethods = ["UPI", "Credit Card", "Debit Card", "Net Banking"];
 
   // Download CSV
   const downloadCSV = () => {
     const headers = ["ID", "Name", "Email", "Event", "Amount", "Status", "Transaction ID"];
-    const rows = filteredRegistrations.map((r) => [
-      r.id,
-      r.userName,
-      r.email,
-      r.event,
-      r.amount,
-      r.paymentStatus,
-      r.transactionId,
+    const rows = registrations.map((r) => [
+      r.registration_id,
+      r.user_name,
+      "",
+      r.event_name,
+      r.gross_amount,
+      r.payment_status,
+      r.transaction_id,
     ]);
     const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv" });
@@ -216,13 +104,33 @@ export default function RegistrationsPage() {
 
   // Stats cards data
   const statsCards = [
-    { title: "Total Registrations", value: filteredRegistrations.length, icon: Users, gradient: "from-red-600 to-rose-700" },
-    { title: "Paid", value: paidCount, icon: CheckCircle2, gradient: "from-emerald-600 to-emerald-700" },
-    { title: "Pending", value: pendingCount, icon: Clock, gradient: "from-amber-600 to-amber-700" },
-    { title: "Gross Revenue", value: `₹${totalGrossRevenue.toLocaleString()}`, icon: DollarSign, gradient: "from-red-600 to-rose-700" },
-    { title: "Gateway Charges", value: `₹${totalGatewayCharges.toFixed(2)}`, icon: CreditCard, gradient: "from-rose-600 to-red-700" },
-    { title: "Net Revenue", value: `₹${totalNetRevenue.toFixed(2)}`, icon: TrendingUp, gradient: "from-red-600 to-rose-700" },
+    { title: "Total Registrations", value: summary.total_registrations, icon: Users, gradient: "from-red-600 to-rose-700" },
+    { title: "Paid", value: summary.paid, icon: CheckCircle2, gradient: "from-emerald-600 to-emerald-700" },
+    { title: "Pending", value: summary.total_registrations - summary.paid, icon: Clock, gradient: "from-amber-600 to-amber-700" },
+    { title: "Gross Revenue", value: `₹${summary.gross_revenue.toLocaleString()}`, icon: DollarSign, gradient: "from-red-600 to-rose-700" },
+    { title: "Gateway Charges", value: `₹${summary.gateway_charges.toFixed(2)}`, icon: CreditCard, gradient: "from-rose-600 to-red-700" },
+    { title: "Net Revenue", value: `₹${summary.net_revenue.toFixed(2)}`, icon: TrendingUp, gradient: "from-red-600 to-rose-700" },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-red-500" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 gap-4">
+        <AlertCircle className="h-12 w-12 text-red-500" />
+        <p className="text-lg text-muted-foreground">Error: {error}</p>
+        <Button onClick={() => refetch()} variant="outline">
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -231,20 +139,14 @@ export default function RegistrationsPage() {
         subtitle="Event Management"
         badge={
           <Badge className="bg-red-500/20 text-red-300 border-red-500/30">
-            {filteredRegistrations.length} total
+            {total} total
           </Badge>
         }
         actions={
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setIsGatewaySettingsOpen(true)} className="border-border/50 hover:bg-muted/50">
-              <Settings className="mr-2 h-4 w-4" />
-              Gateway Settings
-            </Button>
-            <Button onClick={downloadCSV} className="bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white border-0">
-              <Download className="mr-2 h-4 w-4" />
-              Export CSV
-            </Button>
-          </div>
+          <Button onClick={downloadCSV} className="bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white border-0">
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
         }
       />
 
@@ -279,11 +181,14 @@ export default function RegistrationsPage() {
               <Input
                 placeholder="Search by name, email, or transaction ID..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
                 className="pl-10 bg-muted/50 border-border/50"
               />
             </div>
-            <Select value={eventFilter} onValueChange={setEventFilter}>
+            <Select value={eventFilter} onValueChange={(v) => { setEventFilter(v); setPage(1); }}>
               <SelectTrigger className="w-full md:w-48 bg-muted/50 border-border/50">
                 <SelectValue placeholder="Filter by event" />
               </SelectTrigger>
@@ -294,14 +199,25 @@ export default function RegistrationsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+            <Select value={paymentMethodFilter} onValueChange={(v) => { setPaymentMethodFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-full md:w-40 bg-muted/50 border-border/50">
+                <SelectValue placeholder="Payment method" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="all">All Methods</SelectItem>
+                {paymentMethods.map((method) => (
+                  <SelectItem key={method} value={method}>{method}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={paymentStatusFilter} onValueChange={(v) => { setPaymentStatusFilter(v); setPage(1); }}>
               <SelectTrigger className="w-full md:w-40 bg-muted/50 border-border/50">
                 <SelectValue placeholder="Payment status" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Paid">Paid</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
+                <SelectItem value="done">Paid</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -330,59 +246,59 @@ export default function RegistrationsPage() {
                 <TableHead className="text-muted-foreground">Type</TableHead>
                 <TableHead className="text-muted-foreground">Amount</TableHead>
                 <TableHead className="text-muted-foreground">Status</TableHead>
-                <TableHead className="text-muted-foreground">Date</TableHead>
+                <TableHead className="text-muted-foreground">Transaction</TableHead>
                 <TableHead className="text-right text-muted-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredRegistrations.length === 0 ? (
+              {registrations.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No registrations found matching your filters.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredRegistrations.map((reg) => (
+                registrations.map((reg) => (
                   <TableRow
-                    key={reg.id}
+                    key={reg.registration_id}
                     className="border-border/50 cursor-pointer hover:bg-muted/50"
                     onClick={() => setSelectedRegistration(reg)}
                   >
                     <TableCell>
                       <div>
-                        <p className="font-medium">{reg.userName}</p>
-                        <p className="text-sm text-muted-foreground">{reg.email}</p>
+                        <p className="font-medium">{reg.user_name}</p>
+                        <p className="text-sm text-muted-foreground">{reg.college}</p>
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="bg-red-500/20 text-red-300 border-red-500/30">
-                        {reg.event}
+                        {reg.event_name}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm">{reg.participationType}</span>
+                      <span className="text-sm">{reg.participation_type}</span>
                     </TableCell>
                     <TableCell>
-                      <span className="font-medium">₹{reg.amount}</span>
+                      <span className="font-medium">₹{reg.gross_amount}</span>
                     </TableCell>
                     <TableCell>
                       <Badge
                         className={
-                          reg.paymentStatus === "Paid"
+                          reg.payment_status === "done"
                             ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
                             : "bg-amber-500/20 text-amber-300 border-amber-500/30"
                         }
                       >
-                        {reg.paymentStatus === "Paid" ? (
+                        {reg.payment_status === "done" ? (
                           <CheckCircle2 className="mr-1 h-3 w-3" />
                         ) : (
                           <Clock className="mr-1 h-3 w-3" />
                         )}
-                        {reg.paymentStatus}
+                        {reg.payment_status === "done" ? "Paid" : "Pending"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {reg.registrationDate}
+                    <TableCell className="text-muted-foreground text-sm font-mono">
+                      {reg.transaction_id}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setSelectedRegistration(reg); }} className="hover:bg-muted/50">
@@ -394,6 +310,38 @@ export default function RegistrationsPage() {
               )}
             </TableBody>
           </Table>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border/50">
+              <p className="text-sm text-muted-foreground">
+                Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, total)} of {total} results
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(page - 1)}
+                  disabled={page === 1}
+                  className="border-border/50"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">Page {page} of {totalPages}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(page + 1)}
+                  disabled={page === totalPages}
+                  className="border-border/50"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -403,7 +351,7 @@ export default function RegistrationsPage() {
           <DialogHeader>
             <DialogTitle>Registration Details</DialogTitle>
             <DialogDescription>
-              Transaction ID: {selectedRegistration?.transactionId}
+              Transaction ID: {selectedRegistration?.transaction_id}
             </DialogDescription>
           </DialogHeader>
           {selectedRegistration && (
@@ -411,15 +359,7 @@ export default function RegistrationsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-muted-foreground">Name</label>
-                  <p className="font-medium">{selectedRegistration.userName}</p>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">Email</label>
-                  <p className="font-medium">{selectedRegistration.email}</p>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">Phone</label>
-                  <p className="font-medium">{selectedRegistration.phone}</p>
+                  <p className="font-medium">{selectedRegistration.user_name}</p>
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-muted-foreground">College</label>
@@ -427,7 +367,7 @@ export default function RegistrationsPage() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-muted-foreground">Event</label>
-                  <Badge className="bg-red-500/20 text-red-300 border-red-500/30">{selectedRegistration.event}</Badge>
+                  <Badge className="bg-red-500/20 text-red-300 border-red-500/30">{selectedRegistration.event_name}</Badge>
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-muted-foreground">Category</label>
@@ -435,26 +375,26 @@ export default function RegistrationsPage() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-muted-foreground">Participation</label>
-                  <p className="font-medium">{selectedRegistration.participationType} ({selectedRegistration.teamSize})</p>
+                  <p className="font-medium">{selectedRegistration.participation_type} ({selectedRegistration.group_size})</p>
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-muted-foreground">Payment Method</label>
-                  <p className="font-medium">{selectedRegistration.paymentMethod}</p>
+                  <p className="font-medium">{selectedRegistration.payment_method}</p>
                 </div>
               </div>
               <div className="border-t border-border/50 pt-4 mt-2">
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Amount</span>
-                  <span className="font-medium">₹{selectedRegistration.amount}</span>
+                  <span className="font-medium">₹{selectedRegistration.gross_amount}</span>
                 </div>
                 <div className="flex justify-between items-center mt-2">
-                  <span className="text-muted-foreground">Gateway Charge ({gatewayCharges[selectedRegistration.paymentMethod]}%)</span>
-                  <span className="text-red-400">-₹{calculateGatewayCharge(selectedRegistration.amount, selectedRegistration.paymentMethod).toFixed(2)}</span>
+                  <span className="text-muted-foreground">Gateway Charge</span>
+                  <span className="text-red-400">-₹{selectedRegistration.gateway_charge.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center mt-2 pt-2 border-t border-border/50">
                   <span className="font-semibold">Net Amount</span>
                   <span className="font-bold text-emerald-400">
-                    ₹{(selectedRegistration.amount - calculateGatewayCharge(selectedRegistration.amount, selectedRegistration.paymentMethod)).toFixed(2)}
+                    ₹{selectedRegistration.net_amount.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -463,43 +403,6 @@ export default function RegistrationsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedRegistration(null)} className="border-border/50">
               Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Gateway Settings Dialog */}
-      <Dialog open={isGatewaySettingsOpen} onOpenChange={setIsGatewaySettingsOpen}>
-        <DialogContent className="sm:max-w-[400px] bg-card border-border">
-          <DialogHeader>
-            <DialogTitle>Gateway Charges Settings</DialogTitle>
-            <DialogDescription>
-              Configure payment gateway charge percentages
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {Object.entries(gatewayCharges).map(([method, charge]) => (
-              <div key={method} className="flex items-center gap-4">
-                <label className="flex-1 text-sm font-medium">{method}</label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={charge}
-                    onChange={(e) => setGatewayCharges({ ...gatewayCharges, [method]: parseFloat(e.target.value) })}
-                    className="w-20 bg-muted/50 border-border/50"
-                  />
-                  <span className="text-sm text-muted-foreground">%</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsGatewaySettingsOpen(false)} className="border-border/50">
-              Cancel
-            </Button>
-            <Button onClick={() => setIsGatewaySettingsOpen(false)} className="bg-gradient-to-r from-red-600 to-rose-700 text-white border-0">
-              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>

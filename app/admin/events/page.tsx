@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
+import { useEvents, useCategories, useCreateEvent, useUpdateEvent, useDeleteEvent } from "@/hooks/use-admin-data";
+import { Event, EventFee } from "@/lib/admin-api";
 import { AdminPageHeader } from "@/components/admin/ui/AdminSidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
@@ -44,24 +46,27 @@ import {
   DollarSign,
   CheckCircle2,
   XCircle,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 
 type ParticipationCategory = {
   enabled: boolean;
   fee: number;
-  minParticipants?: number;
-  maxParticipants?: number;
+  minParticipants: number;
+  maxParticipants: number;
 };
 
-type Event = {
+type LocalEvent = {
   id: number;
   name: string;
-  category: string;
+  categoryId: number;
+  categoryName: string;
   date: string;
-  time: string;
   venue: string;
   rulebookLink: string;
-  description?: string;
+  description: string;
+  picture: string;
   registrationOpen: boolean;
   freeForDau: boolean;
   participationCategories: {
@@ -71,117 +76,187 @@ type Event = {
   };
 };
 
-const initialEvents: Event[] = [
-  {
-    id: 1,
-    name: "Hackathon 2025",
-    category: "Technical",
-    date: "2025-12-20",
-    time: "10:00",
-    venue: "Auditorium A",
-    rulebookLink: "https://drive.google.com/...",
-    registrationOpen: true,
-    freeForDau: true,
-    participationCategories: {
-      solo: { enabled: true, fee: 100 },
-      duet: { enabled: true, fee: 200 },
-      group: { enabled: false, fee: 500, minParticipants: 3, maxParticipants: 8 },
-    },
-  },
-  {
-    id: 2,
-    name: "Dance Battle",
-    category: "Cultural",
-    date: "2025-12-21",
-    time: "18:30",
-    venue: "Main Stage",
-    rulebookLink: "https://drive.google.com/...",
-    registrationOpen: false,
-    freeForDau: false,
-    participationCategories: {
-      solo: { enabled: true, fee: 150 },
-      duet: { enabled: true, fee: 250 },
-      group: { enabled: true, fee: 800, minParticipants: 4, maxParticipants: 10 },
-    },
-  },
-  {
-    id: 3,
-    name: "Coding Competition",
-    category: "Technical",
-    date: "2025-12-22",
-    time: "14:00",
-    venue: "Computer Lab",
-    rulebookLink: "https://drive.google.com/...",
-    registrationOpen: true,
-    freeForDau: false,
-    participationCategories: {
-      solo: { enabled: true, fee: 75 },
-      duet: { enabled: false, fee: 0 },
-      group: { enabled: false, fee: 0 },
-    },
-  },
-];
-
-const categories = ["Technical", "Cultural", "Sports", "Workshop", "Gaming"];
-
 export default function EventsPage() {
-  const [events, setEvents] = useState<Event[]>(initialEvents);
+
+  const { data: eventsData, loading: eventsLoading, error: eventsError, refetch } = useEvents();
+  const { data: categoriesData, loading: categoriesLoading } = useCategories();
+  const { createEvent, loading: creating } = useCreateEvent();
+  const { updateEvent, loading: updating } = useUpdateEvent();
+  const { deleteEvent, loading: deleting } = useDeleteEvent();
+
+  const [events, setEvents] = useState<LocalEvent[]>([]);
   const [formData, setFormData] = useState({
     name: "",
-    category: "Technical",
+    categoryId: "",
     date: "",
-    time: "",
     venue: "",
     rulebookLink: "",
     description: "",
+    picture: "",
   });
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [editingEvent, setEditingEvent] = useState<LocalEvent | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  const nextIdRef = useRef<number>(Date.now());
+  // Transform API data to local format
+  useEffect(() => {
+    if (eventsData?.events) {
+      const transformedEvents: LocalEvent[] = eventsData.events.map((event: Event) => {
+        const fees = event.event_fee || [];
+
+        const solo = fees.find((f) => f.fee.participation_type.toLowerCase() === "solo");
+        const duet = fees.find((f) => f.fee.participation_type.toLowerCase() === "duet");
+        const group = fees.find((f) => f.fee.participation_type.toLowerCase() === "group");
+
+        return {
+          id: event.event_id,
+          name: event.event_name,
+          categoryId: event.category_id,
+          categoryName: event.event_category?.category_name || "",
+          date: event.event_date.split("T")[0],
+          venue: event.description || "",
+          rulebookLink: event.rulebook || "",
+          description: event.description || "",
+          picture: event.event_picture || "",
+          registrationOpen: event.is_registration_open,
+          freeForDau: event.is_dau_free,
+          participationCategories: {
+            solo: {
+              enabled: !!solo,
+              fee: solo?.fee.price || 0,
+              minParticipants: solo?.fee.min_members || 1,
+              maxParticipants: solo?.fee.max_members || 1,
+            },
+            duet: {
+              enabled: !!duet,
+              fee: duet?.fee.price || 0,
+              minParticipants: duet?.fee.min_members || 2,
+              maxParticipants: duet?.fee.max_members || 2,
+            },
+            group: {
+              enabled: !!group,
+              fee: group?.fee.price || 0,
+              minParticipants: group?.fee.min_members || 3,
+              maxParticipants: group?.fee.max_members || 8,
+            },
+          },
+        };
+      });
+      setEvents(transformedEvents);
+    }
+  }, [eventsData]);
+
+  const categories = categoriesData?.categories || [];
 
   // Create new event
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newEvent: Event = {
-      id: nextIdRef.current++,
-      name: formData.name,
-      category: formData.category,
-      date: formData.date,
-      time: formData.time,
-      venue: formData.venue,
-      rulebookLink: formData.rulebookLink,
-      description: formData.description,
-      registrationOpen: true,
-      freeForDau: false,
-      participationCategories: {
-        solo: { enabled: true, fee: 100 },
-        duet: { enabled: false, fee: 200 },
-        group: { enabled: false, fee: 500, minParticipants: 3, maxParticipants: 8 },
-      },
-    };
-    setEvents([...events, newEvent]);
-    setFormData({ name: "", category: "Technical", date: "", time: "", venue: "", rulebookLink: "", description: "" });
+
+    if (!formData.categoryId) {
+      alert("Please select a category");
+      return;
+    }
+
+    const result = await createEvent({
+      event_name: formData.name,
+      category_id: parseInt(formData.categoryId),
+      event_date: new Date(formData.date).toISOString(),
+      description: formData.description || undefined,
+      rulebook: formData.rulebookLink || undefined,
+      event_picture: formData.picture || undefined,
+      is_registration_open: true,
+      is_dau_free: false,
+      fees: [
+        { type: "solo", price: 100, min: 1, max: 1 },
+      ],
+    });
+
+    if (result) {
+      alert("Event created successfully");
+      setFormData({ name: "", categoryId: "", date: "", venue: "", rulebookLink: "", description: "", picture: "" });
+      refetch();
+    } else {
+      alert("Failed to create event");
+    }
   };
 
   // Toggle registration
-  const toggleRegistration = (id: number) => {
-    setEvents(events.map(e => e.id === id ? { ...e, registrationOpen: !e.registrationOpen } : e));
+  const toggleRegistration = async (event: LocalEvent) => {
+    const fees: EventFee[] = [];
+    ["solo", "duet", "group"].forEach((type) => {
+      const cat = event.participationCategories[type as keyof typeof event.participationCategories];
+      if (cat.enabled) {
+        fees.push({
+          type,
+          price: cat.fee,
+          min: cat.minParticipants,
+          max: cat.maxParticipants,
+        });
+      }
+    });
+
+    const result = await updateEvent(event.id, {
+      event_id: event.id,
+      event_name: event.name,
+      category_id: event.categoryId,
+      event_date: new Date(event.date).toISOString(),
+      is_registration_open: !event.registrationOpen,
+      is_dau_free: event.freeForDau,
+      fees,
+    });
+
+    if (result) {
+      alert("Registration status updated");
+      refetch();
+    } else {
+      alert("Failed to update registration status");
+    }
   };
 
   // Edit event
-  const handleEditClick = (event: Event) => {
+  const handleEditClick = (event: LocalEvent) => {
     setEditingEvent(event);
     setIsEditOpen(true);
   };
 
-  const handleEditSave = () => {
+  const handleEditSave = async () => {
     if (!editingEvent) return;
-    setEvents(events.map(e => e.id === editingEvent.id ? editingEvent : e));
-    setIsEditOpen(false);
-    setEditingEvent(null);
+
+    const fees: EventFee[] = [];
+    ["solo", "duet", "group"].forEach((type) => {
+      const cat = editingEvent.participationCategories[type as keyof typeof editingEvent.participationCategories];
+      if (cat.enabled) {
+        fees.push({
+          type,
+          price: cat.fee,
+          min: cat.minParticipants,
+          max: cat.maxParticipants,
+        });
+      }
+    });
+
+    const result = await updateEvent(editingEvent.id, {
+      event_id: editingEvent.id,
+      event_name: editingEvent.name,
+      category_id: editingEvent.categoryId,
+      event_date: new Date(editingEvent.date).toISOString(),
+      description: editingEvent.description || undefined,
+      rulebook: editingEvent.rulebookLink || undefined,
+      event_picture: editingEvent.picture || undefined,
+      is_registration_open: editingEvent.registrationOpen,
+      is_dau_free: editingEvent.freeForDau,
+      fees,
+    });
+
+    if (result) {
+      alert("Event updated successfully");
+      setIsEditOpen(false);
+      setEditingEvent(null);
+      refetch();
+    } else {
+      alert("Failed to update event");
+    }
   };
 
   // Delete event
@@ -190,9 +265,15 @@ export default function EventsPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (deletingId !== null) {
-      setEvents(events.filter(e => e.id !== deletingId));
+      const success = await deleteEvent(deletingId);
+      if (success) {
+        alert("Event deleted successfully");
+        refetch();
+      } else {
+        alert("Failed to delete event");
+      }
     }
     setDeleteDialogOpen(false);
     setDeletingId(null);
@@ -210,6 +291,26 @@ export default function EventsPage() {
     return colors[category] || "bg-muted text-muted-foreground";
   };
 
+  if (eventsLoading || categoriesLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-red-500" />
+      </div>
+    );
+  }
+
+  if (eventsError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 gap-4">
+        <AlertCircle className="h-12 w-12 text-red-500" />
+        <p className="text-lg text-muted-foreground">Error loading events: {eventsError}</p>
+        <Button onClick={() => refetch()} variant="outline">
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -226,7 +327,7 @@ export default function EventsPage() {
       <Card className="border-border/50">
         <CardHeader className="border-b border-border/50">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-red-600 to-rose-700 text-white">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-linear-to-br from-red-600 to-rose-700 text-white">
               <Plus className="h-5 w-5" />
             </div>
             <div>
@@ -242,20 +343,22 @@ export default function EventsPage() {
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Hackathon 2025"
+                placeholder="e.g., Synapse 2026"
                 required
                 className="bg-muted/50 border-border/50"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Category</label>
-              <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
+              <Select value={formData.categoryId} onValueChange={(v) => setFormData({ ...formData, categoryId: v })}>
                 <SelectTrigger className="bg-muted/50 border-border/50">
-                  <SelectValue />
+                  <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border">
                   {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    <SelectItem key={cat.category_id} value={cat.category_id.toString()}>
+                      {cat.category_name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -271,22 +374,11 @@ export default function EventsPage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Time</label>
-              <Input
-                type="time"
-                value={formData.time}
-                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                required
-                className="bg-muted/50 border-border/50"
-              />
-            </div>
-            <div className="space-y-2">
               <label className="text-sm font-medium">Venue</label>
               <Input
                 value={formData.venue}
                 onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
                 placeholder="e.g., Main Auditorium"
-                required
                 className="bg-muted/50 border-border/50"
               />
             </div>
@@ -300,9 +392,22 @@ export default function EventsPage() {
               />
             </div>
             <div className="md:col-span-2 lg:col-span-3 flex justify-end">
-              <Button type="submit" className="bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white border-0">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Event
+              <Button
+                type="submit"
+                disabled={creating}
+                className="bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white border-0"
+              >
+                {creating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Event
+                  </>
+                )}
               </Button>
             </div>
           </form>
@@ -330,8 +435,7 @@ export default function EventsPage() {
               <TableRow className="border-border/50 hover:bg-muted/50">
                 <TableHead className="text-muted-foreground">Event</TableHead>
                 <TableHead className="text-muted-foreground">Category</TableHead>
-                <TableHead className="text-muted-foreground">Date & Time</TableHead>
-                <TableHead className="text-muted-foreground">Venue</TableHead>
+                <TableHead className="text-muted-foreground">Date</TableHead>
                 <TableHead className="text-muted-foreground">Fees</TableHead>
                 <TableHead className="text-muted-foreground">Registration</TableHead>
                 <TableHead className="text-right text-muted-foreground">Actions</TableHead>
@@ -340,7 +444,7 @@ export default function EventsPage() {
             <TableBody>
               {events.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     No events created yet. Add your first event above!
                   </TableCell>
                 </TableRow>
@@ -363,27 +467,15 @@ export default function EventsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className={getCategoryColor(event.category)}>
+                      <Badge variant="secondary" className={getCategoryColor(event.categoryName)}>
                         <Tag className="mr-1 h-3 w-3" />
-                        {event.category}
+                        {event.categoryName}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        <Badge variant="secondary" className="bg-muted/50 border-border/50">
-                          <Calendar className="mr-1 h-3 w-3" />
-                          {event.date}
-                        </Badge>
-                        <Badge variant="secondary" className="bg-muted/50 border-border/50">
-                          <Clock className="mr-1 h-3 w-3" />
-                          {event.time}
-                        </Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell>
                       <Badge variant="secondary" className="bg-muted/50 border-border/50">
-                        <MapPin className="mr-1 h-3 w-3" />
-                        {event.venue}
+                        <Calendar className="mr-1 h-3 w-3" />
+                        {event.date}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -403,7 +495,8 @@ export default function EventsPage() {
                       <div className="flex items-center gap-2">
                         <Switch
                           checked={event.registrationOpen}
-                          onCheckedChange={() => toggleRegistration(event.id)}
+                          onCheckedChange={() => toggleRegistration(event)}
+                          disabled={updating}
                         />
                         <Badge className={event.registrationOpen ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-red-500/20 text-red-300 border-red-500/30"}>
                           {event.registrationOpen ? <CheckCircle2 className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
@@ -416,7 +509,13 @@ export default function EventsPage() {
                         <Button size="sm" variant="outline" onClick={() => handleEditClick(event)} className="border-border/50 hover:bg-muted/50">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleDeleteClick(event.id)} className="border-red-500/30 text-red-400 hover:bg-red-500/10">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteClick(event.id)}
+                          disabled={deleting}
+                          className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -454,40 +553,30 @@ export default function EventsPage() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Category</label>
-                    <Select value={editingEvent.category} onValueChange={(v) => setEditingEvent({ ...editingEvent, category: v })}>
+                    <Select
+                      value={editingEvent.categoryId.toString()}
+                      onValueChange={(v) => setEditingEvent({
+                        ...editingEvent,
+                        categoryId: parseInt(v),
+                        categoryName: categories.find(c => c.category_id === parseInt(v))?.category_name || ""
+                      })}
+                    >
                       <SelectTrigger className="bg-muted/50 border-border/50">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-card border-border">
                         {categories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                          <SelectItem key={cat.category_id} value={cat.category_id.toString()}>{cat.category_name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 col-span-2">
                     <label className="text-sm font-medium">Date</label>
                     <Input
                       type="date"
                       value={editingEvent.date}
                       onChange={(e) => setEditingEvent({ ...editingEvent, date: e.target.value })}
-                      className="bg-muted/50 border-border/50"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Time</label>
-                    <Input
-                      type="time"
-                      value={editingEvent.time}
-                      onChange={(e) => setEditingEvent({ ...editingEvent, time: e.target.value })}
-                      className="bg-muted/50 border-border/50"
-                    />
-                  </div>
-                  <div className="space-y-2 col-span-2">
-                    <label className="text-sm font-medium">Venue</label>
-                    <Input
-                      value={editingEvent.venue}
-                      onChange={(e) => setEditingEvent({ ...editingEvent, venue: e.target.value })}
                       className="bg-muted/50 border-border/50"
                     />
                   </div>
@@ -619,7 +708,7 @@ export default function EventsPage() {
                           <span className="text-sm">Min:</span>
                           <Input
                             type="number"
-                            value={editingEvent.participationCategories.group.minParticipants || 3}
+                            value={editingEvent.participationCategories.group.minParticipants}
                             onChange={(e) => setEditingEvent({
                               ...editingEvent,
                               participationCategories: {
@@ -634,7 +723,7 @@ export default function EventsPage() {
                           <span className="text-sm">Max:</span>
                           <Input
                             type="number"
-                            value={editingEvent.participationCategories.group.maxParticipants || 8}
+                            value={editingEvent.participationCategories.group.maxParticipants}
                             onChange={(e) => setEditingEvent({
                               ...editingEvent,
                               participationCategories: {
@@ -655,8 +744,19 @@ export default function EventsPage() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditOpen(false)} className="border-border/50">Cancel</Button>
-            <Button onClick={handleEditSave} className="bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white border-0">
-              Save Changes
+            <Button
+              onClick={handleEditSave}
+              disabled={updating}
+              className="bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white border-0"
+            >
+              {updating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -673,7 +773,20 @@ export default function EventsPage() {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} className="border-border/50">Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm}>Delete</Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

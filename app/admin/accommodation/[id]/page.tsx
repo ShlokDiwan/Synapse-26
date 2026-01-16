@@ -3,166 +3,208 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import AccommodationForm from "@/components/admin/forms/AccommodationForm";
-
-interface AccommodationData {
-  type: string;
-  price: string | number;
-  startDate: string;
-  endDate: string;
-  description: string;
-  available?: boolean;
-}
-
-interface Accommodation {
-  id: number;
-  type: string;
-  price: number;
-  startDate: string;
-  endDate: string;
-  description: string;
-  available: boolean;
-}
+import { AdminPageHeader } from "@/components/admin/ui/AdminSidebar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { Button } from "@/app/components/ui/button";
+import { Input } from "@/app/components/ui/input";
+import { ArrowLeft, Home, Loader2, AlertCircle } from "lucide-react";
 
 export default function EditAccommodationPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
 
-  const [accommodation, setAccommodation] = useState<Accommodation | null>(
-    null
-  );
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    package_name: "",
+    price: "",
+    start_date: "",
+    end_date: "",
+    description: "",
+    is_available: true,
+  });
 
   useEffect(() => {
-    // Fetch accommodation data
-    // const fetchAccommodation = async () => {
-    //   try {
-    //     const response = await fetch(`/api/admin/accommodation/${id}`);
-    //     const data = await response.json();
-    //     setAccommodation(data);
-    //   } catch (error) {
-    //     console.error('Error fetching accommodation:', error);
-    //   } finally {
-    //     setIsLoadingData(false);
-    //   }
-    // };
-
-    // Mock data for demonstration
-    setTimeout(() => {
-      setAccommodation({
-        id: parseInt(id),
-        type: "Deluxe Package",
-        price: 5000,
-        startDate: "2025-12-20",
-        endDate: "2025-12-24",
-        available: true,
-        description: "4 days accommodation with meals",
-      });
-      setIsLoadingData(false);
-    }, 500);
+    const fetchAccommodation = async () => {
+      try {
+        const res = await fetch(`/api/admin/accommodation/${id}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        const pkg = data.package || data;
+        setFormData({
+          package_name: pkg.package_name || "",
+          price: pkg.price?.toString() || "",
+          start_date: pkg.start_date?.split("T")[0] || "",
+          end_date: pkg.end_date?.split("T")[0] || "",
+          description: pkg.description || "",
+          is_available: pkg.is_available ?? true,
+        });
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAccommodation();
   }, [id]);
 
-  const handleSubmit = async (data: AccommodationData) => {
-    setIsLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.package_name) {
+      alert("Package name is required");
+      return;
+    }
+
+    setSaving(true);
     try {
-      // Call your API endpoint here
-      // const response = await fetch(`/api/admin/accommodation/${id}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(data),
-      // });
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // On success, redirect to list
+      const res = await fetch(`/api/admin/accommodation/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          package_name: formData.package_name,
+          price: formData.price ? Number(formData.price) : null,
+          start_date: formData.start_date || null,
+          end_date: formData.end_date || null,
+          description: formData.description || null,
+          is_available: formData.is_available,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      alert("Package updated successfully!");
       router.push("/admin/accommodation");
-    } catch (error) {
-      console.error("Error updating accommodation:", error);
-      alert("Failed to update accommodation");
+    } catch (err: any) {
+      alert("Failed to update: " + err.message);
     } finally {
-      setIsLoading(false);
+      setSaving(false);
     }
   };
 
-  if (isLoadingData) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-500">Loading...</p>
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (!accommodation) {
+  if (error) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-500 mb-4">Accommodation not found</p>
-        <Link
-          href="/admin/accommodation"
-          className="text-indigo-600 hover:text-indigo-700"
-        >
-          Back to Accommodations
+      <div className="flex flex-col items-center justify-center h-96 gap-4">
+        <AlertCircle className="h-12 w-12 text-red-500" />
+        <p className="text-lg text-muted-foreground">Error: {error}</p>
+        <Link href="/admin/accommodation">
+          <Button variant="outline">Back</Button>
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link
-          href="/admin/accommodation"
-          className="text-indigo-600 hover:text-indigo-700"
-        >
-          ← Back to Accommodations
-        </Link>
-        <h1 className="text-3xl font-bold text-gray-800">
-          Edit Accommodation Package
-        </h1>
-      </div>
+    <div className="space-y-6 pb-8">
+      <AdminPageHeader
+        title="Edit Package"
+        subtitle="Accommodation"
+        actions={
+          <Link href="/admin/accommodation">
+            <Button variant="outline" className="border-border/50">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+          </Link>
+        }
+      />
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <AccommodationForm
-          initialData={accommodation}
-          onSubmit={handleSubmit}
-          submitButtonText="Update Package"
-          isLoading={isLoading}
-        />
-
-        <div className="mt-6 pt-6 border-t">
+      <Card className="border-border/40 max-w-2xl">
+        <CardHeader className="border-b border-border/40">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-gray-700">
-              Availability Status
-            </span>
-            <button
-              onClick={() =>
-                setAccommodation({
-                  ...accommodation,
-                  available: !accommodation.available,
-                })
-              }
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                accommodation.available ? "bg-green-500" : "bg-red-500"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  accommodation.available ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-            <span
-              className={`text-xs ${
-                accommodation.available ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {accommodation.available ? "Available" : "Full"}
-            </span>
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Home className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle>Package Details</CardTitle>
+              <CardDescription>Update package information</CardDescription>
+            </div>
           </div>
-        </div>
-      </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Package Name *</label>
+                <Input
+                  value={formData.package_name}
+                  onChange={(e) => setFormData({ ...formData, package_name: e.target.value })}
+                  required
+                  className="bg-muted/50 border-border/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Price (₹)</label>
+                <Input
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  className="bg-muted/50 border-border/50"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Start Date</label>
+                <Input
+                  type="date"
+                  value={formData.start_date}
+                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                  className="bg-muted/50 border-border/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">End Date</label>
+                <Input
+                  type="date"
+                  value={formData.end_date}
+                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                  className="bg-muted/50 border-border/50"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full rounded-md border border-border/50 bg-muted/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="is_available"
+                checked={formData.is_available}
+                onChange={(e) => setFormData({ ...formData, is_available: e.target.checked })}
+                className="rounded border-border"
+              />
+              <label htmlFor="is_available" className="text-sm font-medium">Available for booking</label>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button type="submit" disabled={saving} className="bg-primary hover:bg-primary/90">
+                {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : "Save Changes"}
+              </Button>
+              <Link href="/admin/accommodation">
+                <Button type="button" variant="outline" className="border-border/50">Cancel</Button>
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

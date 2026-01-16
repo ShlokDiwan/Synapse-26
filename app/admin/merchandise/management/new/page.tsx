@@ -3,200 +3,162 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { AdminPageHeader } from "@/components/admin/ui/AdminSidebar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { Button } from "@/app/components/ui/button";
+import { Input } from "@/app/components/ui/input";
+import { ArrowLeft, Package, Loader2 } from "lucide-react";
 
-type FormData = {
-  name: string;
-  price: string;
-  sizes: string[];
-  description: string;
-};
-
-export default function CreateMerchandisePage() {
+export default function NewProductPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState<FormData>({
-    name: "",
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    product_name: "",
     price: "",
-    sizes: [],
+    available_sizes: "",
+    product_image: "",
     description: "",
+    is_available: true,
   });
 
-  const allSizes = ["XS", "S", "M", "L", "XL", "XXL", "XXXL", "Free Size"];
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.sizes.length === 0) {
-      if (typeof window !== "undefined") {
-        window.alert("Please select at least one size");
-      }
+    if (!formData.product_name || !formData.price) {
+      alert("Name and Price are required");
       return;
     }
 
+    setLoading(true);
     try {
-      const response = await fetch("/api/admin/merchandise/management", {
+      const res = await fetch("/api/admin/merchandise/management", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          product_name: formData.name,
-          price: parseFloat(formData.price),
-          available_sizes: formData.sizes,
-          description: formData.description,
-          is_available: true,
-          product_image: "", // TODO: Handle image upload
+          product_name: formData.product_name,
+          price: Number(formData.price),
+          available_sizes: formData.available_sizes ? formData.available_sizes.split(",").map(s => s.trim()) : null,
+          product_image: formData.product_image || null,
+          description: formData.description || null,
+          is_available: formData.is_available,
         }),
       });
-
-      const data = await response.json();
-      if (response.ok) {
-        router.push("/admin/merchandise/management");
-      } else {
-        alert(data.error || "Failed to create product");
-      }
-    } catch (error) {
-      console.error("Error creating product:", error);
-      alert("Failed to create product");
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      alert("Product created successfully!");
+      router.push("/admin/merchandise/management");
+    } catch (err: any) {
+      alert("Failed to create product: " + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const toggleSize = (size: string) => {
-    const currentSizes = formData.sizes;
-    const newSizes = currentSizes.includes(size)
-      ? currentSizes.filter((s) => s !== size)
-      : [...currentSizes, size];
-    setFormData({ ...formData, sizes: newSizes });
-  };
-
   return (
-    <div className="space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <Link
-            href="/admin/merchandise/management"
-            className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-teal-700 hover:text-teal-800"
-          >
-            ← Back to Merchandise
+    <div className="space-y-6 pb-8">
+      <AdminPageHeader
+        title="Add Product"
+        subtitle="Merchandise"
+        actions={
+          <Link href="/admin/merchandise/management">
+            <Button variant="outline" className="border-border/50">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
           </Link>
-          <h1 className="text-3xl font-bold text-slate-900">Add New Product</h1>
-        </div>
-      </header>
+        }
+      />
 
-      {/* Add Merchandise Form */}
-      <div className="rounded-2xl border border-teal-100 bg-white/90 p-6 shadow-lg backdrop-blur">
-        <div className="mb-6 flex items-center gap-3">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 text-xl font-bold text-white">
-            +
-          </span>
-          <div>
-            <h2 className="text-xl font-semibold text-slate-900">
-              Product Details
-            </h2>
-            <p className="text-sm text-slate-600">
-              Fill in the information below to add new merchandise
-            </p>
-          </div>
-        </div>
-        <form
-          onSubmit={handleSubmit}
-          className="grid grid-cols-1 gap-4 md:grid-cols-2"
-        >
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Product Name
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-              placeholder="e.g., Synapse T-Shirt"
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Price (₹)
-            </label>
-            <input
-              type="number"
-              value={formData.price}
-              onChange={(e) =>
-                setFormData({ ...formData, price: e.target.value })
-              }
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-              placeholder="Product price"
-              required
-            />
-          </div>
-
-          {/* Sizes Selection */}
-          <div className="md:col-span-2">
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Available Sizes (Select multiple)
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {allSizes.map((size) => (
-                <button
-                  key={size}
-                  type="button"
-                  onClick={() => toggleSize(size)}
-                  className={`rounded-lg border-2 px-4 py-2 text-sm font-semibold transition ${
-                    formData.sizes.includes(size)
-                      ? "border-teal-600 bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-md"
-                      : "border-slate-300 bg-white text-slate-700 hover:border-teal-400 hover:bg-teal-50"
-                  }`}
-                >
-                  {size}
-                </button>
-              ))}
+      <Card className="border-border/40 max-w-2xl">
+        <CardHeader className="border-b border-border/40">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Package className="h-5 w-5 text-primary" />
             </div>
-            <p className="mt-2 text-xs text-slate-500">
-              Selected: {formData.sizes.join(", ") || "None"}
-            </p>
+            <div>
+              <CardTitle>Product Details</CardTitle>
+              <CardDescription>Add a new merchandise product</CardDescription>
+            </div>
           </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Product Name *</label>
+                <Input
+                  value={formData.product_name}
+                  onChange={(e) => setFormData({ ...formData, product_name: e.target.value })}
+                  placeholder="e.g., Synapse T-Shirt"
+                  required
+                  className="bg-muted/50 border-border/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Price (₹) *</label>
+                <Input
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  placeholder="499"
+                  required
+                  className="bg-muted/50 border-border/50"
+                />
+              </div>
+            </div>
 
-          <div className="md:col-span-2">
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Product Image
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              className="block w-full cursor-pointer rounded-lg border border-slate-200 text-sm text-slate-500 shadow-sm file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-gradient-to-r file:from-teal-50 file:to-cyan-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-teal-700 hover:file:from-teal-100 hover:file:to-cyan-100"
-            />
-          </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Available Sizes (comma-separated)</label>
+              <Input
+                value={formData.available_sizes}
+                onChange={(e) => setFormData({ ...formData, available_sizes: e.target.value })}
+                placeholder="S, M, L, XL, XXL"
+                className="bg-muted/50 border-border/50"
+              />
+            </div>
 
-          <div className="md:col-span-2">
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Description
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-              rows={4}
-              placeholder="Product details, material, design info, etc."
-            />
-          </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Product Image URL</label>
+              <Input
+                value={formData.product_image}
+                onChange={(e) => setFormData({ ...formData, product_image: e.target.value })}
+                placeholder="https://example.com/image.jpg"
+                className="bg-muted/50 border-border/50"
+              />
+            </div>
 
-          <div className="md:col-span-2 flex justify-end gap-3 border-t border-slate-200 pt-4">
-            <Link
-              href="/admin/merchandise/management"
-              className="rounded-lg border border-slate-200 px-6 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Cancel
-            </Link>
-            <button
-              type="submit"
-              className="rounded-lg bg-gradient-to-r from-teal-600 to-cyan-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:from-teal-500 hover:to-cyan-500 hover:shadow-xl"
-            >
-              Add Product
-            </button>
-          </div>
-        </form>
-      </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full rounded-md border border-border/50 bg-muted/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                rows={3}
+                placeholder="Product description"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="is_available"
+                checked={formData.is_available}
+                onChange={(e) => setFormData({ ...formData, is_available: e.target.checked })}
+                className="rounded border-border"
+              />
+              <label htmlFor="is_available" className="text-sm font-medium">Available for purchase</label>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button type="submit" disabled={loading} className="bg-primary hover:bg-primary/90">
+                {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</> : "Create Product"}
+              </Button>
+              <Link href="/admin/merchandise/management">
+                <Button type="button" variant="outline" className="border-border/50">Cancel</Button>
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

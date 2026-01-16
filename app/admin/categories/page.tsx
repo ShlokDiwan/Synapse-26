@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminPageHeader } from "@/components/admin/ui/AdminSidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
@@ -22,34 +22,45 @@ import {
   ImageIcon,
   Calendar,
   FolderOpen,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 
 type Category = {
-  id: number;
-  name: string;
+  category_id: number;
+  category_name: string;
   description: string;
-  eventCount: number;
-  imageUrl: string;
-};
-
-type FormData = {
-  name: string;
-  description: string;
+  category_image: string;
+  event_count: number;
 };
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([
-    { id: 1, name: "Technical", description: "Coding, Robotics, Hackathons", eventCount: 5, imageUrl: "" },
-    { id: 2, name: "Cultural", description: "Dance, Music, Drama", eventCount: 4, imageUrl: "" },
-    { id: 3, name: "Sports", description: "Gaming, E-sports", eventCount: 3, imageUrl: "" },
-    { id: 4, name: "Workshop", description: "Hands-on learning sessions", eventCount: 2, imageUrl: "" },
-  ]);
-
-  const [formData, setFormData] = useState<FormData>({ name: "", description: "" });
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState({ name: "", description: "" });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("/api/admin/categories");
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setCategories(data.categories || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -57,24 +68,45 @@ export default function CategoriesPage() {
     setPreviewImage(URL.createObjectURL(file));
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (editingId) {
-      setCategories(categories.map((cat) =>
-        cat.id === editingId ? { ...cat, ...formData, imageUrl: previewImage || cat.imageUrl } : cat
-      ));
-      setEditingId(null);
-    } else {
-      setCategories([...categories, { id: Date.now(), ...formData, eventCount: 0, imageUrl: previewImage || "" }]);
+    if (!formData.name) {
+      alert("Category name is required");
+      return;
     }
-    setFormData({ name: "", description: "" });
-    setPreviewImage(null);
+
+    setSubmitting(true);
+    try {
+      const payload = {
+        category_name: formData.name,
+        description: formData.description || null,
+        category_image: previewImage || null,
+        ...(editingId && { category_id: editingId }),
+      };
+
+      const res = await fetch("/api/admin/categories", {
+        method: editingId ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      await fetchCategories();
+      setFormData({ name: "", description: "" });
+      setPreviewImage(null);
+      setEditingId(null);
+    } catch (err: any) {
+      alert("Failed to save: " + err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleEdit = (category: Category) => {
-    setFormData({ name: category.name, description: category.description });
-    setPreviewImage(category.imageUrl || null);
-    setEditingId(category.id);
+    setFormData({ name: category.category_name, description: category.description || "" });
+    setPreviewImage(category.category_image || null);
+    setEditingId(category.category_id);
   };
 
   const handleDeleteClick = (id: number) => {
@@ -82,12 +114,19 @@ export default function CategoriesPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    if (deletingId !== null) {
-      setCategories(categories.filter((cat) => cat.id !== deletingId));
+  const handleDeleteConfirm = async () => {
+    if (deletingId === null) return;
+    try {
+      const res = await fetch(`/api/admin/categories?id=${deletingId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      await fetchCategories();
+    } catch (err: any) {
+      alert("Failed to delete: " + err.message);
+    } finally {
+      setDeleteDialogOpen(false);
+      setDeletingId(null);
     }
-    setDeleteDialogOpen(false);
-    setDeletingId(null);
   };
 
   const handleCancelEdit = () => {
@@ -96,18 +135,32 @@ export default function CategoriesPage() {
     setPreviewImage(null);
   };
 
-  const totalEvents = categories.reduce((sum, c) => sum + c.eventCount, 0);
+  const totalEvents = categories.reduce((sum, c) => sum + (c.event_count || 0), 0);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 gap-4">
+        <AlertCircle className="h-12 w-12 text-red-500" />
+        <p className="text-lg text-muted-foreground">Error: {error}</p>
+        <Button onClick={() => { setError(null); setLoading(true); fetchCategories(); }} variant="outline">Retry</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-8">
       <AdminPageHeader
         title="Event Categories"
         subtitle="Management"
-        badge={
-          <Badge className="bg-primary/10 text-primary border-0">
-            {categories.length} categories
-          </Badge>
-        }
+        badge={<Badge className="bg-primary/10 text-primary border-0">{categories.length} categories</Badge>}
       />
 
       {/* Stats */}
@@ -141,7 +194,7 @@ export default function CategoriesPage() {
                 <Tag className="h-5 w-5 text-emerald-400" />
               </div>
             </div>
-            <p className="text-2xl font-bold">{(totalEvents / categories.length).toFixed(1)}</p>
+            <p className="text-2xl font-bold">{categories.length > 0 ? (totalEvents / categories.length).toFixed(1) : 0}</p>
             <p className="text-sm text-muted-foreground">Avg per Category</p>
           </CardContent>
         </Card>
@@ -157,9 +210,7 @@ export default function CategoriesPage() {
               </div>
               <div>
                 <CardTitle>{editingId ? "Edit Category" : "Add Category"}</CardTitle>
-                <CardDescription>
-                  {editingId ? "Update category details" : "Create a new event category"}
-                </CardDescription>
+                <CardDescription>{editingId ? "Update category details" : "Create a new event category"}</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -175,7 +226,6 @@ export default function CategoriesPage() {
                   className="bg-muted/50 border-border/50"
                 />
               </div>
-
               <div className="space-y-2">
                 <label className="text-sm font-medium">Description</label>
                 <textarea
@@ -184,10 +234,8 @@ export default function CategoriesPage() {
                   className="w-full rounded-md border border-border/50 bg-muted/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                   rows={3}
                   placeholder="Brief description of this category"
-                  required
                 />
               </div>
-
               <div className="space-y-2">
                 <label className="text-sm font-medium">Category Image</label>
                 <Input
@@ -197,11 +245,10 @@ export default function CategoriesPage() {
                   className="bg-muted/50 border-border/50 file:bg-primary/10 file:text-primary file:border-0 file:rounded file:px-3 file:py-1 file:text-sm file:font-medium"
                 />
               </div>
-
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90">
+              <Button type="submit" disabled={submitting} className="w-full bg-primary hover:bg-primary/90">
+                {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {editingId ? "Update Category" : "Add Category"}
               </Button>
-
               {editingId && (
                 <Button type="button" variant="outline" onClick={handleCancelEdit} className="w-full border-border/50">
                   Cancel
@@ -213,7 +260,6 @@ export default function CategoriesPage() {
 
         {/* Categories List */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Preview Card */}
           {(formData.name || previewImage) && (
             <Card className="border-border/40">
               <CardHeader className="pb-3">
@@ -237,7 +283,6 @@ export default function CategoriesPage() {
             </Card>
           )}
 
-          {/* Categories Grid */}
           <Card className="border-border/40">
             <CardHeader className="border-b border-border/40">
               <CardTitle>All Categories</CardTitle>
@@ -253,26 +298,23 @@ export default function CategoriesPage() {
                 <div className="space-y-3">
                   {categories.map((category) => (
                     <div
-                      key={category.id}
+                      key={category.category_id}
                       className="flex items-center gap-4 p-4 rounded-xl border border-border/40 hover:border-primary/30 transition-colors"
                     >
-                      {category.imageUrl ? (
-                        <img src={category.imageUrl} alt={category.name} className="h-14 w-14 rounded-lg object-cover" />
+                      {category.category_image ? (
+                        <img src={category.category_image} alt={category.category_name} className="h-14 w-14 rounded-lg object-cover" />
                       ) : (
                         <div className="h-14 w-14 rounded-lg bg-primary/10 flex items-center justify-center">
                           <Tag className="h-6 w-6 text-primary" />
                         </div>
                       )}
-
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold">{category.name}</h3>
+                        <h3 className="font-semibold">{category.category_name}</h3>
                         <p className="text-sm text-muted-foreground truncate">{category.description}</p>
                       </div>
-
                       <Badge variant="secondary" className="bg-primary/10 text-primary border-0">
-                        {category.eventCount} events
+                        {category.event_count || 0} events
                       </Badge>
-
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleEdit(category)} className="border-border/50">
                           <Edit className="h-4 w-4" />
@@ -280,7 +322,7 @@ export default function CategoriesPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDeleteClick(category.id)}
+                          onClick={() => handleDeleteClick(category.category_id)}
                           className="border-red-500/30 text-red-400 hover:bg-red-500/10"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -295,7 +337,6 @@ export default function CategoriesPage() {
         </div>
       </div>
 
-      {/* Delete Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[400px] bg-card border-border">
           <DialogHeader>
@@ -305,12 +346,8 @@ export default function CategoriesPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} className="border-border/50">
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm}>
-              Delete
-            </Button>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} className="border-border/50">Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

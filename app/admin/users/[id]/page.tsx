@@ -1,147 +1,157 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { AdminPageHeader } from "@/components/admin/ui/AdminSidebar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
+import { ArrowLeft, User, Mail, Phone, GraduationCap, Calendar, Tag, Loader2, AlertCircle } from "lucide-react";
 
-type UserFormData = {
-  name: string;
+type UserDetail = {
+  user_name: string;
   email: string;
   phone: string;
   college: string;
+  registration_date: string;
+  event_count: number;
   events: string[];
 };
 
-type PageProps = {
-  params: { id: string };
-};
+export default function UserDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
+  const [user, setUser] = useState<UserDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-export default function EditUserPage({ params }: PageProps) {
-  const router = useRouter();
-  const [formData, setFormData] = useState<UserFormData>({
-    name: "John Doe",
-    email: "john@example.com",
-    phone: "9876543210",
-    college: "ABC College",
-    events: ["Hackathon 2025", "Dance Battle"],
-  });
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch(`/api/admin/users/${id}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        setUser(data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUser();
+  }, [id]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Updating user:", params.id, formData);
-    router.push("/admin/users");
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  if (error || !user) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 gap-4">
+        <AlertCircle className="h-12 w-12 text-red-500" />
+        <p className="text-lg text-muted-foreground">Error: {error || "User not found"}</p>
+        <Link href="/admin/users">
+          <Button variant="outline">Back to Users</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const initials = user.user_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
-    <div>
-      <div className="mb-6">
-        <button
-          onClick={() => router.push("/admin/users")}
-          className="text-indigo-600 hover:text-indigo-800 flex items-center gap-2"
-        >
-          ← Back to Users
-        </button>
-      </div>
+    <div className="space-y-6 pb-8">
+      <AdminPageHeader
+        title="User Details"
+        subtitle={user.user_name}
+        actions={
+          <Link href="/admin/users">
+            <Button variant="outline" className="border-border/50">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+          </Link>
+        }
+      />
 
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">
-        Edit User #{params.id}
-      </h1>
-
-      <div className="bg-white rounded-lg shadow p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Name *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* User Profile */}
+        <Card className="border-border/40">
+          <CardHeader className="border-b border-border/40">
+            <div className="flex items-center gap-4">
+              <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-white text-xl font-bold">
+                {initials}
+              </div>
+              <div>
+                <CardTitle>{user.user_name}</CardTitle>
+                <CardDescription>{user.college}</CardDescription>
+              </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email *
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              />
+          </CardHeader>
+          <CardContent className="pt-6 space-y-4">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <Mail className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Email</p>
+                <p className="font-medium">{user.email}</p>
+              </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phone *
-              </label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              />
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <Phone className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Phone</p>
+                <p className="font-medium">{user.phone}</p>
+              </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                College *
-              </label>
-              <input
-                type="text"
-                name="college"
-                value={formData.college}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              />
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <GraduationCap className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">College</p>
+                <p className="font-medium">{user.college}</p>
+              </div>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Registered Events
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {formData.events.map((event, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm"
-                >
-                  {event}
-                </span>
-              ))}
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <Calendar className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Registration Date</p>
+                <p className="font-medium">{user.registration_date?.split("T")[0]}</p>
+              </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="flex justify-end gap-4 pt-4 border-t">
-            <button
-              type="button"
-              onClick={() => router.push("/admin/users")}
-              className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-            >
-              Update User
-            </button>
-          </div>
-        </form>
+        {/* Registered Events */}
+        <Card className="border-border/40">
+          <CardHeader className="border-b border-border/40">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                <Tag className="h-5 w-5 text-amber-400" />
+              </div>
+              <div>
+                <CardTitle>Registered Events</CardTitle>
+                <CardDescription>{user.event_count} events</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {user.events.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No events registered</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {user.events.map((event, idx) => (
+                  <Badge key={idx} className="bg-primary/10 text-primary border-0">
+                    {event}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

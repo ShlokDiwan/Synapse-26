@@ -1,178 +1,96 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { AdminPageHeader } from "@/components/admin/ui/AdminSidebar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
+import { ArrowLeft, Calendar, Loader2, AlertCircle } from "lucide-react";
 
-type User = {
-  id: number;
-  name: string;
-  email: string;
-  college: string;
-};
+export default function UserEventListPage() {
+  const [events, setEvents] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-type EventGroup = {
-  eventName: string;
-  users: User[];
-};
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const res = await fetch("/api/admin/users/eventlist");
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        setEvents(data.events || []);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvents();
+  }, []);
 
-const mockEventData: EventGroup[] = [
-  {
-    eventName: "Hackathon 2025",
-    users: [
-      {
-        id: 1,
-        name: "John Doe",
-        email: "john@example.com",
-        college: "ABC College",
-      },
-      {
-        id: 3,
-        name: "Mike Johnson",
-        email: "mike@example.com",
-        college: "DEF Institute",
-      },
-    ],
-  },
-  {
-    eventName: "Dance Battle",
-    users: [
-      {
-        id: 1,
-        name: "John Doe",
-        email: "john@example.com",
-        college: "ABC College",
-      },
-      {
-        id: 4,
-        name: "Sarah Williams",
-        email: "sarah@example.com",
-        college: "GHI College",
-      },
-    ],
-  },
-  {
-    eventName: "Coding Competition",
-    users: [
-      {
-        id: 2,
-        name: "Jane Smith",
-        email: "jane@example.com",
-        college: "XYZ University",
-      },
-    ],
-  },
-  {
-    eventName: "Robotics Workshop",
-    users: [
-      {
-        id: 3,
-        name: "Mike Johnson",
-        email: "mike@example.com",
-        college: "DEF Institute",
-      },
-    ],
-  },
-  {
-    eventName: "Gaming Tournament",
-    users: [
-      {
-        id: 3,
-        name: "Mike Johnson",
-        email: "mike@example.com",
-        college: "DEF Institute",
-      },
-    ],
-  },
-];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-export default function UsersEventListPage() {
-  const router = useRouter();
-  const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
-
-  const toggleEvent = (eventName: string) => {
-    const newExpanded = new Set(expandedEvents);
-    if (newExpanded.has(eventName)) {
-      newExpanded.delete(eventName);
-    } else {
-      newExpanded.add(eventName);
-    }
-    setExpandedEvents(newExpanded);
-  };
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 gap-4">
+        <AlertCircle className="h-12 w-12 text-red-500" />
+        <p className="text-lg text-muted-foreground">Error: {error}</p>
+        <Link href="/admin/users">
+          <Button variant="outline">Back</Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <div className="mb-6">
-        <button
-          onClick={() => router.push("/admin/users")}
-          className="text-indigo-600 hover:text-indigo-800 flex items-center gap-2"
-        >
-          ← Back to Users
-        </button>
-      </div>
+    <div className="space-y-6 pb-8">
+      <AdminPageHeader
+        title="Event List"
+        subtitle="For Users Filter"
+        badge={<Badge className="bg-primary/10 text-primary border-0">{events.length} events</Badge>}
+        actions={
+          <Link href="/admin/users">
+            <Button variant="outline" className="border-border/50">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+          </Link>
+        }
+      />
 
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Users by Event</h1>
-
-      <div className="space-y-4">
-        {mockEventData.map((eventGroup) => (
-          <div
-            key={eventGroup.eventName}
-            className="bg-white rounded-lg shadow overflow-hidden"
-          >
-            <button
-              onClick={() => toggleEvent(eventGroup.eventName)}
-              className="w-full px-6 py-4 flex justify-between items-center hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-lg font-semibold text-gray-800">
-                  {eventGroup.eventName}
-                </span>
-                <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
-                  {eventGroup.users.length}{" "}
-                  {eventGroup.users.length === 1 ? "user" : "users"}
-                </span>
-              </div>
-              <span className="text-2xl text-gray-400">
-                {expandedEvents.has(eventGroup.eventName) ? "−" : "+"}
-              </span>
-            </button>
-
-            {expandedEvents.has(eventGroup.eventName) && (
-              <div className="border-t">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Email
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        College
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {eventGroup.users.map((user) => (
-                      <tr key={user.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                          {user.name}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          {user.email}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          {user.college}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+      <Card className="border-border/40">
+        <CardHeader className="border-b border-border/40">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Calendar className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle>Available Events</CardTitle>
+              <CardDescription>Filter users by these events</CardDescription>
+            </div>
           </div>
-        ))}
-      </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          {events.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">No events found</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {events.map((event, idx) => (
+                <Badge key={idx} className="bg-primary/10 text-primary border-0 px-3 py-1">
+                  {event}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

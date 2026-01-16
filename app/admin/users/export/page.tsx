@@ -1,190 +1,99 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import Link from "next/link";
+import { AdminPageHeader } from "@/components/admin/ui/AdminSidebar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { Button } from "@/app/components/ui/button";
+import { Input } from "@/app/components/ui/input";
+import { ArrowLeft, Download, FileSpreadsheet, Loader2 } from "lucide-react";
 
-type ExportFormat = "csv" | "json" | "excel";
-
-type ExportOptions = {
-  format: ExportFormat;
-  includeEvents: boolean;
-  includeContactInfo: boolean;
-  filterByEvent: string;
-};
-
-const availableEvents = [
-  "All Events",
-  "Hackathon 2025",
-  "Dance Battle",
-  "Coding Competition",
-  "Robotics Workshop",
-  "Gaming Tournament",
-];
-
-export default function ExportUsersPage() {
-  const router = useRouter();
-  const [options, setOptions] = useState<ExportOptions>({
-    format: "csv",
-    includeEvents: true,
-    includeContactInfo: true,
-    filterByEvent: "All Events",
+export default function UserExportPage() {
+  const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState({
+    searchParams: "",
+    filter: "",
   });
 
-  const handleExport = () => {
-    console.log("Exporting with options:", options);
-    alert(`Exporting users as ${options.format.toUpperCase()}...`);
+  const handleExport = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+
+      const res = await fetch(`/api/admin/users/export?${params.toString()}`);
+      if (!res.ok) throw new Error("Export failed");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `users_${new Date().toISOString().split("T")[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert("Export failed: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div>
-      <div className="mb-6">
-        <button
-          onClick={() => router.push("/admin/users")}
-          className="text-indigo-600 hover:text-indigo-800 flex items-center gap-2"
-        >
-          ← Back to Users
-        </button>
-      </div>
+    <div className="space-y-6 pb-8">
+      <AdminPageHeader
+        title="Export Users"
+        subtitle="Download CSV"
+        actions={
+          <Link href="/admin/users">
+            <Button variant="outline" className="border-border/50">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+          </Link>
+        }
+      />
 
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Export Users</h1>
-
-      <div className="bg-white rounded-lg shadow p-6 max-w-2xl">
-        <div className="space-y-6">
-          {/* Export Format */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Export Format *
-            </label>
-            <div className="space-y-2">
-              {(["csv", "json", "excel"] as ExportFormat[]).map((format) => (
-                <label
-                  key={format}
-                  className="flex items-center gap-3 cursor-pointer"
-                >
-                  <input
-                    type="radio"
-                    name="format"
-                    value={format}
-                    checked={options.format === format}
-                    onChange={(e) =>
-                      setOptions({
-                        ...options,
-                        format: e.target.value as ExportFormat,
-                      })
-                    }
-                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="text-gray-700">{format.toUpperCase()}</span>
-                </label>
-              ))}
+      <Card className="border-border/40 max-w-2xl">
+        <CardHeader className="border-b border-border/40">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <FileSpreadsheet className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle>Export Options</CardTitle>
+              <CardDescription>Configure filters for your export</CardDescription>
             </div>
           </div>
-
-          {/* Filter by Event */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filter by Event
-            </label>
-            <select
-              value={options.filterByEvent}
-              onChange={(e) =>
-                setOptions({ ...options, filterByEvent: e.target.value })
-              }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-            >
-              {availableEvents.map((event) => (
-                <option key={event} value={event}>
-                  {event}
-                </option>
-              ))}
-            </select>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Search (optional)</label>
+            <Input
+              value={filters.searchParams}
+              onChange={(e) => setFilters({ ...filters, searchParams: e.target.value })}
+              placeholder="Search by name, email, or college"
+              className="bg-muted/50 border-border/50"
+            />
           </div>
 
-          {/* Include Options */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Include in Export
-            </label>
-            <div className="space-y-2">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={options.includeEvents}
-                  onChange={(e) =>
-                    setOptions({ ...options, includeEvents: e.target.checked })
-                  }
-                  className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-                />
-                <span className="text-gray-700">
-                  Event Registration Details
-                </span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={options.includeContactInfo}
-                  onChange={(e) =>
-                    setOptions({
-                      ...options,
-                      includeContactInfo: e.target.checked,
-                    })
-                  }
-                  className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-                />
-                <span className="text-gray-700">
-                  Contact Information (Phone, Email)
-                </span>
-              </label>
-            </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Event Filter (optional)</label>
+            <Input
+              value={filters.filter}
+              onChange={(e) => setFilters({ ...filters, filter: e.target.value })}
+              placeholder="Filter by event name"
+              className="bg-muted/50 border-border/50"
+            />
           </div>
 
-          {/* Export Summary */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h3 className="font-semibold text-gray-800 mb-2">Export Summary</h3>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li>
-                • Format:{" "}
-                <span className="font-medium">
-                  {options.format.toUpperCase()}
-                </span>
-              </li>
-              <li>
-                • Event Filter:{" "}
-                <span className="font-medium">{options.filterByEvent}</span>
-              </li>
-              <li>
-                • Events Data:{" "}
-                <span className="font-medium">
-                  {options.includeEvents ? "Yes" : "No"}
-                </span>
-              </li>
-              <li>
-                • Contact Info:{" "}
-                <span className="font-medium">
-                  {options.includeContactInfo ? "Yes" : "No"}
-                </span>
-              </li>
-            </ul>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-4 pt-4 border-t">
-            <button
-              onClick={() => router.push("/admin/users")}
-              className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleExport}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-            >
-              <span>📥</span>
-              Export Data
-            </button>
-          </div>
-        </div>
-      </div>
+          <Button onClick={handleExport} disabled={loading} className="w-full bg-primary hover:bg-primary/90 mt-4">
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+            Export to CSV
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
