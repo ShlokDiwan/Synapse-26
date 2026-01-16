@@ -61,6 +61,10 @@ export const metadata: Metadata = {
     "gujarat",
     "DAkaTyohaar",
   ],
+  icons: {
+    icon: "/images_home/uncolored2.svg",
+    apple: "/images_home/uncolored2.svg",
+  },
   openGraph: {
     title: "SYNAPSE'26",
     description: "The Ultimate Techno-Cultural Festival",
