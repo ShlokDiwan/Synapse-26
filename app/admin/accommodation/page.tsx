@@ -2,7 +2,38 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import AccommodationTable from "@/components/admin/tables/AccommodationTable";
+import { AdminPageHeader } from "@/components/admin/ui/AdminSidebar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
+import { Switch } from "@/app/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/app/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/app/components/ui/table";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Hotel,
+  Calendar,
+  DollarSign,
+  CheckCircle,
+  XCircle,
+  Users,
+} from "lucide-react";
 
 interface Accommodation {
   id: number;
@@ -45,7 +76,8 @@ export default function AccommodationPage() {
     },
   ]);
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const handleToggleAvailability = (id: number) => {
     setAccommodations(
@@ -55,40 +87,215 @@ export default function AccommodationPage() {
     );
   };
 
-  const handleDelete = (id: number) => {
-    setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setAccommodations(accommodations.filter((a) => a.id !== id));
-      setIsLoading(false);
-    }, 500);
+  const handleDeleteClick = (id: number) => {
+    setDeletingId(id);
+    setDeleteDialogOpen(true);
   };
 
+  const handleDeleteConfirm = () => {
+    if (deletingId !== null) {
+      setAccommodations(accommodations.filter((a) => a.id !== deletingId));
+    }
+    setDeleteDialogOpen(false);
+    setDeletingId(null);
+  };
+
+  const availableCount = accommodations.filter(a => a.available).length;
+  const totalRevenue = accommodations.reduce((sum, a) => sum + a.price, 0);
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Accommodation Management
-        </h1>
-        <Link
-          href="/admin/accommodation/new"
-          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-        >
-          + Add New Package
-        </Link>
+    <div className="space-y-6 pb-8">
+      <AdminPageHeader
+        title="Accommodation"
+        subtitle="Lodging Management"
+        badge={
+          <Badge className="bg-primary/10 text-primary border-0">
+            {accommodations.length} packages
+          </Badge>
+        }
+        actions={
+          <Link href="/admin/accommodation/new">
+            <Button className="bg-primary hover:bg-primary/90">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Package
+            </Button>
+          </Link>
+        }
+      />
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-border/40">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Hotel className="h-5 w-5 text-primary" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold">{accommodations.length}</p>
+            <p className="text-sm text-muted-foreground">Total Packages</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/40">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-emerald-400" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold">{availableCount}</p>
+            <p className="text-sm text-muted-foreground">Available</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/40">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="h-10 w-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+                <XCircle className="h-5 w-5 text-red-400" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold">{accommodations.length - availableCount}</p>
+            <p className="text-sm text-muted-foreground">Unavailable</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/40">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-amber-400" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold">₹{totalRevenue.toLocaleString()}</p>
+            <p className="text-sm text-muted-foreground">Avg Package Value</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-6">
-          All Accommodation Packages
-        </h2>
-        <AccommodationTable
-          accommodations={accommodations}
-          onToggleAvailability={handleToggleAvailability}
-          onDelete={handleDelete}
-          isLoading={isLoading}
-        />
-      </div>
+      {/* Packages Table */}
+      <Card className="border-border/40">
+        <CardHeader className="border-b border-border/40">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Hotel className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle>All Packages</CardTitle>
+              <CardDescription>Manage accommodation options for attendees</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border/40 hover:bg-transparent">
+                <TableHead className="text-muted-foreground">Package</TableHead>
+                <TableHead className="text-muted-foreground">Price</TableHead>
+                <TableHead className="text-muted-foreground">Dates</TableHead>
+                <TableHead className="text-muted-foreground">Status</TableHead>
+                <TableHead className="text-right text-muted-foreground">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {accommodations.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                    <Hotel className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No accommodation packages yet.</p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                accommodations.map((acc) => (
+                  <TableRow key={acc.id} className="border-border/40 hover:bg-secondary/20">
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                          <Hotel className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{acc.type}</p>
+                          <p className="text-sm text-muted-foreground">{acc.description}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-lg font-bold">₹{acc.price.toLocaleString()}</span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant="secondary" className="bg-secondary/50 w-fit">
+                          <Calendar className="mr-1 h-3 w-3" />
+                          {acc.startDate}
+                        </Badge>
+                        <Badge variant="secondary" className="bg-secondary/50 w-fit">
+                          <Calendar className="mr-1 h-3 w-3" />
+                          {acc.endDate}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Switch
+                          checked={acc.available}
+                          onCheckedChange={() => handleToggleAvailability(acc.id)}
+                        />
+                        <Badge
+                          className={acc.available
+                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                            : "bg-red-500/10 text-red-400 border-red-500/30"
+                          }
+                        >
+                          {acc.available ? (
+                            <><CheckCircle className="mr-1 h-3 w-3" /> Available</>
+                          ) : (
+                            <><XCircle className="mr-1 h-3 w-3" /> Unavailable</>
+                          )}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Link href={`/admin/accommodation/${acc.id}`}>
+                          <Button variant="outline" size="sm" className="border-border/50">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteClick(acc.id)}
+                          className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Delete Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[400px] bg-card border-border">
+          <DialogHeader>
+            <DialogTitle>Delete Package</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this accommodation package? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} className="border-border/50">
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

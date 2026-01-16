@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
 export default function MerchandisePage() {
   const router = useRouter();
@@ -11,10 +12,10 @@ export default function MerchandisePage() {
   }, [router]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <div className="flex min-h-[50vh] items-center justify-center">
       <div className="text-center">
-        <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-teal-600 border-r-transparent"></div>
-        <p className="text-sm text-slate-600">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+        <p className="text-sm text-muted-foreground">
           Redirecting to merchandise management...
         </p>
       </div>

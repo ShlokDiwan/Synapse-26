@@ -1,6 +1,47 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
+import { AdminPageHeader } from "@/components/admin/ui/AdminSidebar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
+import { Input } from "@/app/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/app/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/app/components/ui/table";
+import { Avatar, AvatarFallback } from "@/app/components/ui/avatar";
+import {
+  Download,
+  Search,
+  Eye,
+  Mail,
+  Phone,
+  GraduationCap,
+  Calendar,
+  Tag,
+  X,
+  Users as UsersIcon,
+} from "lucide-react";
 
 type User = {
   id: number;
@@ -49,278 +90,285 @@ const initialUsers: User[] = [
     regDate: "2025-12-04",
     events: ["Dance Battle"],
   },
+  {
+    id: 5,
+    name: "Tom Brown",
+    email: "tom@example.com",
+    phone: "9876543214",
+    college: "JKL University",
+    regDate: "2025-12-05",
+    events: ["Art Exhibition", "Music Competition"],
+  },
 ];
 
-const Users: React.FC = () => {
+export default function UsersPage() {
   const [users] = useState<User[]>(initialUsers);
-  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [eventFilter, setEventFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [eventFilter, setEventFilter] = useState<string>("All Events");
 
-  const allEvents = [
-    "All Events",
-    ...Array.from(new Set(users.flatMap((u) => u.events))),
-  ] as string[];
+  // Get unique events
+  const allEvents = [...new Set(users.flatMap((u) => u.events))];
 
-  const filteredUsers = users.filter((user: User) => {
-    const term = searchTerm.trim().toLowerCase();
+  // Filter users
+  const filteredUsers = users.filter((user) => {
     const matchesSearch =
-      term === "" ||
-      user.name.toLowerCase().includes(term) ||
-      user.email.toLowerCase().includes(term) ||
-      user.college.toLowerCase().includes(term);
-
-    const matchesEvent =
-      eventFilter === "All Events" || user.events.includes(eventFilter);
-
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.college.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesEvent = eventFilter === "all" || user.events.includes(eventFilter);
     return matchesSearch && matchesEvent;
   });
 
+  // Download CSV
   const downloadCSV = () => {
-    const headers = [
-      "Name",
-      "Email",
-      "Phone",
-      "College",
-      "Registration Date",
-      "Events Registered",
-    ];
-
-    const rows = filteredUsers.map((user: User) => [
-      user.name,
-      user.email,
-      user.phone,
-      user.college,
-      user.regDate,
-      `"${user.events.join(", ")}"`,
+    const headers = ["Name", "Email", "Phone", "College", "Registration Date", "Events"];
+    const rows = filteredUsers.map((u) => [
+      u.name,
+      u.email,
+      u.phone,
+      u.college,
+      u.regDate,
+      `"${u.events.join(", ")}"`,
     ]);
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((r) => r.join(",")),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
+    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `users_${eventFilter === "all" ? "all" : eventFilter.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+  };
 
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `users_${eventFilter.replace(/\s+/g, "_")}_${
-        new Date().toISOString().split("T")[0]
-      }.csv`
-    );
-    link.style.visibility = "hidden";
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // Get initials
+  const getInitials = (name: string) => {
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">
-        Users Management
-      </h1>
-
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Search Users
-            </label>
-            <input
-              type="text"
-              placeholder="Search by name, email, or college..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filter by Event
-            </label>
-            <select
-              value={eventFilter}
-              onChange={(e) => setEventFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-            >
-              {allEvents.map((event, idx) => (
-                <option key={idx} value={event}>
-                  {event}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {(searchTerm || eventFilter !== "All Events") && (
-          <div className="mt-4 flex items-center gap-2 text-sm">
-            <span className="text-gray-600">Active filters:</span>
-            {searchTerm && (
-              <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded">
-                Search: "{searchTerm}"
-              </span>
-            )}
-            {eventFilter !== "All Events" && (
-              <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
-                Event: {eventFilter}
-              </span>
-            )}
-            <button
-              onClick={() => {
-                setSearchTerm("");
-                setEventFilter("All Events");
-              }}
-              className="text-red-600 hover:text-red-800 ml-2"
-            >
-              Clear all
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6 border-b flex justify-between items-center">
-          <h2 className="text-xl font-semibold">
-            All Users ({filteredUsers.length})
-            {eventFilter !== "All Events" && (
-              <span className="text-sm text-gray-500 ml-2">
-                - Registered in "{eventFilter}"
-              </span>
-            )}
-          </h2>
-          <button
+    <div className="space-y-6">
+      <AdminPageHeader
+        title="Users"
+        subtitle="Management"
+        badge={
+          <Badge className="bg-red-500/20 text-red-300 border-red-500/30">
+            {filteredUsers.length} users
+          </Badge>
+        }
+        actions={
+          <Button
             onClick={downloadCSV}
             disabled={filteredUsers.length === 0}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+            className="bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white border-0"
           >
-            <span>📥</span>
-            Download CSV
-          </button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Phone
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  College
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Registration Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Events
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredUsers.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="px-6 py-8 text-center text-gray-500"
-                  >
-                    No users found matching the selected filters.
-                  </td>
-                </tr>
-              ) : (
-                filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                      {user.name}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {user.email}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {user.phone}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {user.college}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {user.regDate}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-indigo-600">
-                      {user.events.length}
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      <button
-                        onClick={() => setSelectedUser(user)}
-                        className="text-indigo-600 hover:text-indigo-800"
-                      >
-                        View Details
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
+        }
+      />
 
-      {selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xl font-semibold">{selectedUser.name}</h3>
+      {/* Filters */}
+      <Card className="border-border/50">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, email, or college..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-muted/50 border-border/50"
+              />
+            </div>
+            <Select value={eventFilter} onValueChange={setEventFilter}>
+              <SelectTrigger className="w-full md:w-56 bg-muted/50 border-border/50">
+                <SelectValue placeholder="Filter by event" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="all">All Events</SelectItem>
+                {allEvents.map((event) => (
+                  <SelectItem key={event} value={event}>{event}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Active filters */}
+          {(searchTerm || eventFilter !== "all") && (
+            <div className="flex items-center gap-2 mt-4 text-sm">
+              <span className="text-muted-foreground">Active filters:</span>
+              {searchTerm && (
+                <Badge variant="secondary" className="gap-1 bg-muted border-border/50">
+                  Search: &quot;{searchTerm}&quot;
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => setSearchTerm("")} />
+                </Badge>
+              )}
+              {eventFilter !== "all" && (
+                <Badge variant="secondary" className="gap-1 bg-red-500/20 text-red-300 border-red-500/30">
+                  Event: {eventFilter}
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => setEventFilter("all")} />
+                </Badge>
+              )}
               <button
-                onClick={() => setSelectedUser(null)}
-                className="text-gray-500 hover:text-gray-700 text-xl"
+                onClick={() => { setSearchTerm(""); setEventFilter("all"); }}
+                className="text-red-400 hover:text-red-300 text-sm font-medium"
               >
-                ✕
+                Clear all
               </button>
             </div>
-            <div className="space-y-2 mb-4">
-              <p>
-                <strong>Email:</strong> {selectedUser.email}
-              </p>
-              <p>
-                <strong>Phone:</strong> {selectedUser.phone}
-              </p>
-              <p>
-                <strong>College:</strong> {selectedUser.college}
-              </p>
-              <p>
-                <strong>Registration Date:</strong> {selectedUser.regDate}
-              </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Users Table */}
+      <Card className="border-border/50">
+        <CardHeader className="border-b border-border/50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-red-600 to-rose-700 text-white">
+                <UsersIcon className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle>All Users</CardTitle>
+                <CardDescription>
+                  {filteredUsers.length} users found
+                  {eventFilter !== "all" && ` registered for "${eventFilter}"`}
+                </CardDescription>
+              </div>
             </div>
-            <div className="mb-4">
-              <strong>Registered Events ({selectedUser.events.length}):</strong>
-              <ul className="list-disc list-inside mt-2 text-gray-700 space-y-1">
-                {selectedUser.events.map((event, idx) => (
-                  <li key={idx}>{event}</li>
-                ))}
-              </ul>
-            </div>
-            <button
-              onClick={() => setSelectedUser(null)}
-              className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-            >
-              Close
-            </button>
           </div>
-        </div>
-      )}
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border/50 hover:bg-muted/50">
+                <TableHead className="text-muted-foreground">User</TableHead>
+                <TableHead className="text-muted-foreground">Phone</TableHead>
+                <TableHead className="text-muted-foreground">College</TableHead>
+                <TableHead className="text-muted-foreground">Registered</TableHead>
+                <TableHead className="text-muted-foreground">Events</TableHead>
+                <TableHead className="text-right text-muted-foreground">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    No users found matching your filters.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredUsers.map((user) => (
+                  <TableRow key={user.id} className="border-border/50 hover:bg-muted/50">
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10 bg-gradient-to-br from-red-600 to-rose-700">
+                          <AvatarFallback className="bg-gradient-to-br from-red-600 to-rose-700 text-white text-sm font-medium">
+                            {getInitials(user.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{user.name}</p>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{user.phone}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="bg-muted/50 text-foreground border-border/50">
+                        <GraduationCap className="mr-1 h-3 w-3" />
+                        {user.college}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{user.regDate}</TableCell>
+                    <TableCell>
+                      <Badge className="bg-red-500/20 text-red-300 border-red-500/30">
+                        {user.events.length} events
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedUser(user)}
+                        className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* User Details Dialog */}
+      <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
+        <DialogContent className="sm:max-w-[500px] bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <Avatar className="h-12 w-12 bg-gradient-to-br from-red-600 to-rose-700">
+                <AvatarFallback className="bg-gradient-to-br from-red-600 to-rose-700 text-white font-medium">
+                  {selectedUser && getInitials(selectedUser.name)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <span>{selectedUser?.name}</span>
+                <p className="text-sm font-normal text-muted-foreground">{selectedUser?.college}</p>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-1 gap-4">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <Mail className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="font-medium">{selectedUser.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <Phone className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Phone</p>
+                    <p className="font-medium">{selectedUser.phone}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <Calendar className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Registration Date</p>
+                    <p className="font-medium">{selectedUser.regDate}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-border/50 pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Tag className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">Registered Events ({selectedUser.events.length})</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {selectedUser.events.map((event, idx) => (
+                    <Badge key={idx} className="bg-red-500/20 text-red-300 border-red-500/30">
+                      {event}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedUser(null)} className="border-border/50">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
-
-export default Users;
+}

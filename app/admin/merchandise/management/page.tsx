@@ -2,6 +2,30 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { AdminPageHeader } from "@/components/admin/ui/AdminSidebar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
+import { Switch } from "@/app/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/app/components/ui/dialog";
+import { Skeleton } from "@/app/components/ui/skeleton";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  ShoppingBag,
+  Package,
+  DollarSign,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 
 type Merchandise = {
   id: number;
@@ -16,8 +40,9 @@ type Merchandise = {
 export default function MerchandiseManagementPage() {
   const [merchandise, setMerchandise] = useState<Merchandise[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  // Fetch products from API
   useEffect(() => {
     fetchProducts();
   }, []);
@@ -27,8 +52,7 @@ export default function MerchandiseManagementPage() {
       const response = await fetch("/api/admin/merchandise/management");
       const data = await response.json();
       if (data.products) {
-        // Map API response to component state
-        const mappedProducts = data.products.map((product: any) => ({
+        const mappedProducts = data.products.map((product: { product_id: number; product_name: string; price: number; available_sizes?: string[]; product_image?: string; is_available: boolean; description?: string }) => ({
           id: product.product_id,
           name: product.product_name,
           price: product.price,
@@ -46,29 +70,24 @@ export default function MerchandiseManagementPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (
-      typeof window !== "undefined" &&
-      window.confirm("Are you sure you want to delete this merchandise?")
-    ) {
+  const handleDeleteClick = (id: number) => {
+    setDeletingId(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deletingId !== null) {
       try {
-        const response = await fetch(
-          `/api/admin/merchandise/management/${id}`,
-          {
-            method: "DELETE",
-          }
-        );
+        const response = await fetch(`/api/admin/merchandise/management/${deletingId}`, { method: "DELETE" });
         if (response.ok) {
-          setMerchandise(merchandise.filter((m) => m.id !== id));
-        } else {
-          const data = await response.json();
-          alert(data.error || "Failed to delete product");
+          setMerchandise(merchandise.filter((m) => m.id !== deletingId));
         }
       } catch (error) {
         console.error("Error deleting product:", error);
-        alert("Failed to delete product");
       }
     }
+    setDeleteDialogOpen(false);
+    setDeletingId(null);
   };
 
   const toggleAvailability = async (id: number) => {
@@ -83,138 +102,206 @@ export default function MerchandiseManagementPage() {
       });
 
       if (response.ok) {
-        setMerchandise(
-          merchandise.map((m) =>
-            m.id === id ? { ...m, available: !m.available } : m
-          )
-        );
-      } else {
-        const data = await response.json();
-        alert(data.error || "Failed to update availability");
+        setMerchandise(merchandise.map((m) => m.id === id ? { ...m, available: !m.available } : m));
       }
     } catch (error) {
       console.error("Error toggling availability:", error);
-      alert("Failed to update availability");
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-teal-700">
-            Store Management
-          </p>
-          <h1 className="text-3xl font-bold text-slate-900">Merchandise</h1>
-        </div>
-        <Link
-          href="/admin/merchandise/management/new"
-          className="rounded-lg bg-gradient-to-r from-teal-600 to-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:from-teal-500 hover:to-cyan-500 hover:shadow-xl"
-        >
-          + Add New Product
-        </Link>
-      </header>
+  const availableCount = merchandise.filter(m => m.available).length;
+  const totalValue = merchandise.reduce((sum, m) => sum + m.price, 0);
 
-      {/* Merchandise Grid */}
-      <div className="overflow-hidden rounded-2xl border border-indigo-100 bg-white/90 shadow-lg backdrop-blur">
-        <div className="border-b border-slate-100 bg-gradient-to-r from-slate-900 to-slate-800 px-6 py-4">
-          <h2 className="text-xl font-semibold text-white">
-            All Merchandise ({merchandise.length})
-          </h2>
-        </div>
-        {loading ? (
-          <div className="flex min-h-[300px] items-center justify-center">
-            <div className="text-center">
-              <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-teal-600 border-r-transparent"></div>
-              <p className="text-sm text-slate-600">Loading products...</p>
+  return (
+    <div className="space-y-6 pb-8">
+      <AdminPageHeader
+        title="Merchandise"
+        subtitle="Store Management"
+        badge={
+          <Badge className="bg-primary/10 text-primary border-0">
+            {merchandise.length} products
+          </Badge>
+        }
+        actions={
+          <Link href="/admin/merchandise/management/new">
+            <Button className="bg-primary hover:bg-primary/90">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Product
+            </Button>
+          </Link>
+        }
+      />
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-border/40">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Package className="h-5 w-5 text-primary" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold">{merchandise.length}</p>
+            <p className="text-sm text-muted-foreground">Total Products</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/40">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-emerald-400" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold">{availableCount}</p>
+            <p className="text-sm text-muted-foreground">In Stock</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/40">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="h-10 w-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+                <XCircle className="h-5 w-5 text-red-400" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold">{merchandise.length - availableCount}</p>
+            <p className="text-sm text-muted-foreground">Out of Stock</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/40">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-amber-400" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold">₹{totalValue.toLocaleString()}</p>
+            <p className="text-sm text-muted-foreground">Total Value</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Products Grid */}
+      <Card className="border-border/40">
+        <CardHeader className="border-b border-border/40">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <ShoppingBag className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle>All Products</CardTitle>
+              <CardDescription>Manage your merchandise inventory</CardDescription>
             </div>
           </div>
-        ) : merchandise.length === 0 ? (
-          <div className="flex min-h-[300px] items-center justify-center">
-            <p className="text-slate-600">
-              No products found. Add your first product!
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 p-6 md:grid-cols-2 lg:grid-cols-3">
-            {merchandise.map((item) => (
-              <div
-                key={item.id}
-                className="group overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm transition hover:shadow-lg"
-              >
-                {/* Availability Toggle */}
-                <div className="mb-3 flex items-start justify-between">
-                  <h3 className="text-lg font-semibold text-slate-900">
-                    {item.name}
-                  </h3>
-                  <button
-                    onClick={() => toggleAvailability(item.id)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      item.available ? "bg-green-500" : "bg-red-500"
-                    }`}
-                    aria-label="Toggle availability"
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
-                        item.available ? "translate-x-6" : "translate-x-1"
-                      }`}
-                    />
-                  </button>
+        </CardHeader>
+        <CardContent className="p-6">
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="p-5 rounded-xl border border-border/40">
+                  <Skeleton className="h-6 w-3/4 mb-4" />
+                  <Skeleton className="h-8 w-1/2 mb-4" />
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-4 w-2/3" />
                 </div>
-
-                <span
-                  className={`mb-3 inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    item.available
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
-                  }`}
+              ))}
+            </div>
+          ) : merchandise.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No products found.</p>
+              <p className="text-sm">Add your first product to get started!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {merchandise.map((item) => (
+                <div
+                  key={item.id}
+                  className="group p-5 rounded-xl border border-border/40 bg-card hover:border-primary/30 transition-all"
                 >
-                  {item.available ? "✓ In Stock" : "✗ Out of Stock"}
-                </span>
-
-                <div className="mb-4 space-y-2">
-                  <p className="text-2xl font-bold text-indigo-700">
-                    ₹{item.price}
-                  </p>
-                  <div className="text-sm text-slate-600">
-                    <p className="mb-1 font-medium">Available Sizes:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {item.sizes.map((size) => (
-                        <span
-                          key={size}
-                          className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700"
-                        >
-                          {size}
-                        </span>
-                      ))}
-                    </div>
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="font-semibold text-lg">{item.name}</h3>
+                    <Switch
+                      checked={item.available}
+                      onCheckedChange={() => toggleAvailability(item.id)}
+                    />
                   </div>
+
+                  <Badge
+                    className={item.available
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 mb-3"
+                      : "bg-red-500/10 text-red-400 border-red-500/30 mb-3"
+                    }
+                  >
+                    {item.available ? (
+                      <><CheckCircle className="mr-1 h-3 w-3" /> In Stock</>
+                    ) : (
+                      <><XCircle className="mr-1 h-3 w-3" /> Out of Stock</>
+                    )}
+                  </Badge>
+
+                  <p className="text-2xl font-bold text-primary mb-3">₹{item.price}</p>
+
+                  {item.sizes.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-xs text-muted-foreground mb-1.5">Sizes:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {item.sizes.map((size) => (
+                          <Badge key={size} variant="secondary" className="bg-secondary/50 text-xs">
+                            {size}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {item.description && (
-                    <p className="mt-2 text-sm text-slate-600">
-                      📝 {item.description}
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                      {item.description}
                     </p>
                   )}
-                </div>
 
-                <div className="mt-4 flex gap-2">
-                  <Link
-                    href={`/admin/merchandise/management/${item.id}`}
-                    className="flex-1 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow transition hover:from-blue-500 hover:to-indigo-500"
-                  >
-                    Edit
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(item.id)}
-                    className="flex-1 rounded-lg bg-gradient-to-r from-rose-500 to-red-600 px-3 py-2 text-sm font-semibold text-white shadow transition hover:from-rose-400 hover:to-red-500"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex gap-2 pt-3 border-t border-border/40">
+                    <Link href={`/admin/merchandise/management/${item.id}`} className="flex-1">
+                      <Button variant="outline" size="sm" className="w-full border-border/50">
+                        <Edit className="mr-1 h-3 w-3" />
+                        Edit
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteClick(item.id)}
+                      className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Delete Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[400px] bg-card border-border">
+          <DialogHeader>
+            <DialogTitle>Delete Product</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this product? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} className="border-border/50">
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

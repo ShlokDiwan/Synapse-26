@@ -1,6 +1,28 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState, useRef } from "react";
+import { AdminPageHeader } from "@/components/admin/ui/AdminSidebar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
+import { Input } from "@/app/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/app/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/app/components/ui/table";
+import { Plus, Edit, Trash2, Calendar, MapPin, Clock, Music } from "lucide-react";
 
 type Concert = {
   id: number;
@@ -46,6 +68,9 @@ export default function ConcertsPage() {
     timing: "",
   });
 
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
   const nextIdRef = useRef<number>(Date.now());
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -54,10 +79,17 @@ export default function ConcertsPage() {
     setFormData({ name: "", date: "", venue: "", timing: "" });
   };
 
-  const handleDelete = (id: number) => {
-    if (typeof window !== "undefined" && window.confirm("Are you sure?")) {
-      setConcerts((prev) => prev.filter((c) => c.id !== id));
+  const handleDeleteClick = (id: number) => {
+    setDeletingId(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deletingId !== null) {
+      setConcerts((prev) => prev.filter((c) => c.id !== deletingId));
     }
+    setDeleteDialogOpen(false);
+    setDeletingId(null);
   };
 
   const handleEditClick = (concert: Concert) => {
@@ -81,249 +113,265 @@ export default function ConcertsPage() {
     setEditingId(null);
   };
 
-  const handleEditClose = () => {
-    setIsEditOpen(false);
-    setEditingId(null);
-  };
-
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-teal-700">
-            Concerts
-          </p>
-          <h1 className="text-3xl font-bold text-slate-900">Concert Nights</h1>
-        </div>
-        <span className="rounded-full bg-teal-100 px-3 py-1 text-sm font-semibold text-teal-800">
-          {concerts.length} total
-        </span>
-      </header>
+      {/* Page Header */}
+      <AdminPageHeader
+        title="Concert Nights"
+        subtitle="Concerts"
+        badge={
+          <Badge className="bg-red-500/20 text-red-300 border-red-500/30">
+            {concerts.length} total
+          </Badge>
+        }
+      />
 
-      <section className="rounded-2xl border border-teal-100 bg-white/90 p-6 shadow-lg">
-        <div className="mb-4 flex items-center gap-3">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 text-white font-bold">
-            +
-          </span>
-          <div>
-            <h2 className="text-xl font-semibold text-slate-900">
-              Add New Concert Night
-            </h2>
-            <p className="text-sm text-slate-600">
-              Keep your concert lineup up to date.
-            </p>
-          </div>
-        </div>
-        <form
-          onSubmit={handleSubmit}
-          className="grid grid-cols-1 gap-4 md:grid-cols-2"
-        >
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Concert Name
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-              placeholder="e.g., Night 1 - EDM Night"
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Date
-            </label>
-            <input
-              type="date"
-              value={formData.date}
-              onChange={(e) =>
-                setFormData({ ...formData, date: e.target.value })
-              }
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Venue
-            </label>
-            <input
-              type="text"
-              value={formData.venue}
-              onChange={(e) =>
-                setFormData({ ...formData, venue: e.target.value })
-              }
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Timing
-            </label>
-            <input
-              type="text"
-              value={formData.timing}
-              onChange={(e) =>
-                setFormData({ ...formData, timing: e.target.value })
-              }
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-              placeholder="e.g., 7:00 PM - 11:00 PM"
-              required
-            />
-          </div>
-          <div className="md:col-span-2 flex items-center justify-end">
-            <button
-              type="submit"
-              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-teal-600 to-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:shadow-xl hover:from-teal-500 hover:to-cyan-500"
-            >
-              Add Concert Night
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-lg">
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-gradient-to-r from-slate-900 to-slate-800 text-white">
-          <h2 className="text-lg font-semibold">All Concert Nights</h2>
-          <span className="text-sm text-white/80">
-            Manage and edit your lineup
-          </span>
-        </div>
-        <div className="divide-y divide-slate-100">
-          {concerts.map((concert) => (
-            <div
-              key={concert.id}
-              className="flex flex-col gap-3 px-6 py-4 transition hover:bg-slate-50 md:flex-row md:items-center md:justify-between"
-            >
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900">
-                  {concert.name}
-                </h3>
-                <div className="mt-1 flex flex-wrap gap-3 text-sm text-slate-700">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-3 py-1 font-medium text-teal-700">
-                    📅 {concert.date}
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-cyan-50 px-3 py-1 font-medium text-cyan-700">
-                    📍 {concert.venue}
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-3 py-1 font-medium text-indigo-700">
-                    🕐 {concert.timing}
-                  </span>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleEditClick(concert)}
-                  className="rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow hover:from-blue-500 hover:to-indigo-500"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(concert.id)}
-                  className="rounded-lg bg-gradient-to-r from-rose-500 to-red-600 px-3 py-1.5 text-sm font-semibold text-white shadow hover:from-rose-400 hover:to-red-500"
-                >
-                  Delete
-                </button>
-              </div>
+      {/* Add Concert Form */}
+      <Card className="border-border/50">
+        <CardHeader className="border-b border-border/50">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-red-600 to-rose-700 text-white font-bold">
+              <Plus className="h-5 w-5" />
             </div>
-          ))}
-        </div>
-      </section>
-
-      {isEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-900 to-slate-800 px-6 py-4 text-white">
-              <h2 className="text-lg font-semibold">Edit Concert Night</h2>
-              <button
-                onClick={handleEditClose}
-                className="text-2xl leading-none text-white/70 hover:text-white"
+            <div>
+              <CardTitle>Add New Concert Night</CardTitle>
+              <CardDescription>Keep your concert lineup up to date.</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Concert Name</label>
+              <Input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g., Night 1 - EDM Night"
+                required
+                className="bg-muted/50 border-border/50"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Date</label>
+              <Input
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                required
+                className="bg-muted/50 border-border/50"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Venue</label>
+              <Input
+                type="text"
+                value={formData.venue}
+                onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
+                placeholder="e.g., Main Ground"
+                required
+                className="bg-muted/50 border-border/50"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Timing</label>
+              <Input
+                type="text"
+                value={formData.timing}
+                onChange={(e) => setFormData({ ...formData, timing: e.target.value })}
+                placeholder="e.g., 7:00 PM - 11:00 PM"
+                required
+                className="bg-muted/50 border-border/50"
+              />
+            </div>
+            <div className="md:col-span-2 flex justify-end">
+              <Button
+                type="submit"
+                className="bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white border-0"
               >
-                &times;
-              </button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Concert Night
+              </Button>
             </div>
-            <form onSubmit={handleEditSave} className="space-y-4 px-6 py-5">
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Concerts Table */}
+      <Card className="border-border/50">
+        <CardHeader className="border-b border-border/50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-red-600 to-rose-700 text-white">
+                <Music className="h-5 w-5" />
+              </div>
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Concert Name
-                </label>
-                <input
-                  type="text"
+                <CardTitle>All Concert Nights</CardTitle>
+                <CardDescription>Manage and edit your lineup</CardDescription>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border/50 hover:bg-muted/50">
+                <TableHead className="text-muted-foreground">Concert Name</TableHead>
+                <TableHead className="text-muted-foreground">Date</TableHead>
+                <TableHead className="text-muted-foreground">Venue</TableHead>
+                <TableHead className="text-muted-foreground">Timing</TableHead>
+                <TableHead className="text-right text-muted-foreground">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {concerts.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    No concerts added yet. Add your first concert above!
+                  </TableCell>
+                </TableRow>
+              ) : (
+                concerts.map((concert) => (
+                  <TableRow key={concert.id} className="border-border/50 hover:bg-muted/50">
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/20 text-red-400">
+                          <Music className="h-4 w-4" />
+                        </div>
+                        <span className="font-medium">{concert.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="bg-red-500/20 text-red-300 border-red-500/30">
+                        <Calendar className="mr-1 h-3 w-3" />
+                        {concert.date}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="bg-muted/50 border-border/50">
+                        <MapPin className="mr-1 h-3 w-3" />
+                        {concert.venue}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="bg-muted/50 border-border/50">
+                        <Clock className="mr-1 h-3 w-3" />
+                        {concert.timing}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEditClick(concert)}
+                          className="border-border/50 hover:bg-muted/50"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteClick(concert.id)}
+                          className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="sm:max-w-[500px] bg-card border-border">
+          <DialogHeader>
+            <DialogTitle>Edit Concert Night</DialogTitle>
+            <DialogDescription>
+              Make changes to the concert details below.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSave}>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Concert Name</label>
+                <Input
                   value={editData.name}
-                  onChange={(e) =>
-                    setEditData({ ...editData, name: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                  onChange={(e) => setEditData({ ...editData, name: e.target.value })}
                   required
+                  className="bg-muted/50 border-border/50"
                 />
               </div>
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Date
-                </label>
-                <input
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Date</label>
+                <Input
                   type="date"
                   value={editData.date}
-                  onChange={(e) =>
-                    setEditData({ ...editData, date: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                  onChange={(e) => setEditData({ ...editData, date: e.target.value })}
                   required
+                  className="bg-muted/50 border-border/50"
                 />
               </div>
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Venue
-                </label>
-                <input
-                  type="text"
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Venue</label>
+                <Input
                   value={editData.venue}
-                  onChange={(e) =>
-                    setEditData({ ...editData, venue: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                  onChange={(e) => setEditData({ ...editData, venue: e.target.value })}
                   required
+                  className="bg-muted/50 border-border/50"
                 />
               </div>
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Timing
-                </label>
-                <input
-                  type="text"
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Timing</label>
+                <Input
                   value={editData.timing}
-                  onChange={(e) =>
-                    setEditData({ ...editData, timing: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                  onChange={(e) => setEditData({ ...editData, timing: e.target.value })}
                   placeholder="e.g., 7:00 PM - 11:00 PM"
                   required
+                  className="bg-muted/50 border-border/50"
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={handleEditClose}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2 text-sm font-semibold text-white shadow hover:from-indigo-500 hover:to-purple-500"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)} className="border-border/50">
+                Cancel
+              </Button>
+              <Button type="submit" className="bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white border-0">
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[400px] bg-card border-border">
+          <DialogHeader>
+            <DialogTitle>Delete Concert</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this concert? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeleteDialogOpen(false)} className="border-border/50">
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

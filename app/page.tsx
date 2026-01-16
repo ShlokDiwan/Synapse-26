@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import gsap from "gsap";
 import HomeSection from "@/app/synapse/page";

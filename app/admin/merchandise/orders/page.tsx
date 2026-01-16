@@ -1,7 +1,46 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import { AdminPageHeader } from "@/components/admin/ui/AdminSidebar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
+import { Input } from "@/app/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/app/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/app/components/ui/table";
+import { Skeleton } from "@/app/components/ui/skeleton";
+import {
+  Download,
+  Search,
+  ShoppingCart,
+  Package,
+  DollarSign,
+  CheckCircle,
+  Clock,
+  Eye,
+  X,
+} from "lucide-react";
 
 type OrderItem = {
   product: string;
@@ -25,8 +64,10 @@ type Order = {
 export default function MerchandiseOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [productFilter, setProductFilter] = useState("all");
 
-  // Fetch orders from API
   useEffect(() => {
     fetchOrders();
   }, []);
@@ -36,12 +77,11 @@ export default function MerchandiseOrdersPage() {
       const response = await fetch("/api/admin/merchandise/orders");
       const data = await response.json();
       if (data.orders) {
-        // Map API response to component state
-        const mappedOrders = data.orders.map((order: any) => ({
+        const mappedOrders = data.orders.map((order: { order_id: number; customer_id: string; items?: OrderItem[]; amount: number; order_date: string; payment_status: "Paid" | "Pending"; payment_method?: string }) => ({
           id: order.order_id,
-          userName: order.customer_id, // TODO: Fetch user details from customer_id
-          email: "", // TODO: Fetch from user profile
-          phone: "", // TODO: Fetch from user profile
+          userName: order.customer_id,
+          email: "",
+          phone: "",
           items: order.items || [],
           totalAmount: order.amount,
           orderDate: new Date(order.order_date).toISOString().split("T")[0],
@@ -57,47 +97,27 @@ export default function MerchandiseOrdersPage() {
     }
   };
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [productFilter, setProductFilter] = useState("All Products");
-
   // Get unique products
-  const allProducts = [
-    "All Products",
-    ...new Set(
-      orders.flatMap((order) => order.items.map((item) => item.product))
-    ),
-  ];
+  const allProducts = [...new Set(orders.flatMap((order) => order.items.map((item) => item.product)))];
 
   // Filter orders
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.email.toLowerCase().includes(searchTerm.toLowerCase());
-
     const matchesProduct =
-      productFilter === "All Products" ||
-      order.items.some((item) => item.product === productFilter);
-
+      productFilter === "all" || order.items.some((item) => item.product === productFilter);
     return matchesSearch && matchesProduct;
   });
 
+  // Stats
+  const paidOrders = filteredOrders.filter(o => o.paymentStatus === "Paid");
+  const totalRevenue = paidOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+  const pendingOrders = filteredOrders.filter(o => o.paymentStatus === "Pending");
+
   // Download CSV
   const downloadCSV = () => {
-    const headers = [
-      "Order ID",
-      "Customer Name",
-      "Email",
-      "Phone",
-      "Product",
-      "Size",
-      "Quantity",
-      "Price per Item",
-      "Total Amount",
-      "Order Date",
-      "Payment Status",
-    ];
-
+    const headers = ["Order ID", "Customer Name", "Email", "Phone", "Product", "Size", "Quantity", "Price", "Total", "Date", "Status"];
     const rows: (string | number)[][] = [];
     filteredOrders.forEach((order) => {
       order.items.forEach((item, idx) => {
@@ -116,338 +136,310 @@ export default function MerchandiseOrdersPage() {
         ]);
       });
     });
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) => row.join(",")),
-    ].join("\n");
-
+    const csvContent = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `merchandise_orders_${new Date().toISOString().split("T")[0]}.csv`
-    );
-    link.style.visibility = "hidden";
-
-    if (typeof document !== "undefined") {
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    link.setAttribute("href", URL.createObjectURL(blob));
+    link.setAttribute("download", `merchandise_orders_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
-    <div className="space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-purple-700">
-            Order Management
-          </p>
-          <h1 className="text-3xl font-bold text-slate-900">
-            Merchandise Orders
-          </h1>
-        </div>
-        <span className="rounded-full bg-purple-100 px-3 py-1 text-sm font-semibold text-purple-800">
-          {filteredOrders.length} orders
-        </span>
-      </header>
+    <div className="space-y-6 pb-8">
+      <AdminPageHeader
+        title="Merchandise Orders"
+        subtitle="Store Management"
+        badge={
+          <Badge className="bg-primary/10 text-primary border-0">
+            {filteredOrders.length} orders
+          </Badge>
+        }
+        actions={
+          <Button onClick={downloadCSV} disabled={filteredOrders.length === 0} className="bg-primary hover:bg-primary/90">
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
+        }
+      />
 
-      {/* Search and Filters */}
-      <div className="rounded-2xl border border-purple-100 bg-white/90 p-6 shadow-lg backdrop-blur">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="md:col-span-2">
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Search Orders
-            </label>
-            <input
-              type="text"
-              placeholder="Search by customer name or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Filter by Product
-            </label>
-            <select
-              value={productFilter}
-              onChange={(e) => setProductFilter(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
-            >
-              {allProducts.map((product, idx) => (
-                <option key={idx} value={product}>
-                  {product}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Active Filters */}
-        {(searchTerm || productFilter !== "All Products") && (
-          <div className="mt-4 flex items-center gap-2 text-sm">
-            <span className="text-slate-600">Active filters:</span>
-            {searchTerm && (
-              <span className="rounded-full bg-purple-100 px-2.5 py-1 text-purple-700">
-                Search: "{searchTerm}"
-              </span>
-            )}
-            {productFilter !== "All Products" && (
-              <span className="rounded-full bg-teal-100 px-2.5 py-1 text-teal-700">
-                Product: {productFilter}
-              </span>
-            )}
-            <button
-              onClick={() => {
-                setSearchTerm("");
-                setProductFilter("All Products");
-              }}
-              className="ml-2 text-red-600 transition hover:text-red-800"
-            >
-              Clear all
-            </button>
-          </div>
-        )}
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-border/40">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <ShoppingCart className="h-5 w-5 text-primary" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold">{filteredOrders.length}</p>
+            <p className="text-sm text-muted-foreground">Total Orders</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/40">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-emerald-400" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold">{paidOrders.length}</p>
+            <p className="text-sm text-muted-foreground">Paid Orders</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/40">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-amber-400" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold">{pendingOrders.length}</p>
+            <p className="text-sm text-muted-foreground">Pending</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/40">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-emerald-400" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold">₹{totalRevenue.toLocaleString()}</p>
+            <p className="text-sm text-muted-foreground">Revenue</p>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Filters */}
+      <Card className="border-border/40">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by customer name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-muted/50 border-border/50"
+              />
+            </div>
+            <Select value={productFilter} onValueChange={setProductFilter}>
+              <SelectTrigger className="w-full md:w-48 bg-muted/50 border-border/50">
+                <SelectValue placeholder="Filter by product" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="all">All Products</SelectItem>
+                {allProducts.map((product) => (
+                  <SelectItem key={product} value={product}>{product}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(searchTerm || productFilter !== "all") && (
+              <Button
+                variant="outline"
+                onClick={() => { setSearchTerm(""); setProductFilter("all"); }}
+                className="border-border/50"
+              >
+                <X className="mr-1 h-4 w-4" />
+                Clear
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Orders Table */}
-      <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white/90 shadow-lg backdrop-blur">
-        <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-900 to-slate-800 px-6 py-4">
-          <h2 className="text-xl font-semibold text-white">
-            All Orders ({filteredOrders.length})
-            {productFilter !== "All Products" && (
-              <span className="ml-2 text-sm text-slate-300">
-                - "{productFilter}"
-              </span>
-            )}
-          </h2>
-          <button
-            onClick={downloadCSV}
-            disabled={filteredOrders.length === 0}
-            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-green-600 px-4 py-2 text-sm font-semibold text-white shadow transition hover:from-emerald-500 hover:to-green-500 disabled:cursor-not-allowed disabled:from-slate-400 disabled:to-slate-500"
-          >
-            <span>📥</span>
-            Download CSV
-          </button>
-        </div>
-        {loading ? (
-          <div className="flex min-h-[300px] items-center justify-center">
-            <div className="text-center">
-              <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent"></div>
-              <p className="text-sm text-slate-600">Loading orders...</p>
+      <Card className="border-border/40">
+        <CardHeader className="border-b border-border/40">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Package className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle>All Orders</CardTitle>
+              <CardDescription>View order details and export data</CardDescription>
             </div>
           </div>
-        ) : filteredOrders.length === 0 ? (
-          <div className="flex min-h-[300px] items-center justify-center">
-            <p className="text-slate-600">No orders found.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase text-slate-500">
-                    Order ID
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase text-slate-500">
-                    Customer
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase text-slate-500">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase text-slate-500">
-                    Items
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase text-slate-500">
-                    Total Amount
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase text-slate-500">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase text-slate-500">
-                    Payment
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase text-slate-500">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-6 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex gap-4">
+                  <Skeleton className="h-12 w-12 rounded-lg" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-4 w-1/4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border/40 hover:bg-transparent">
+                  <TableHead className="text-muted-foreground">Order ID</TableHead>
+                  <TableHead className="text-muted-foreground">Customer</TableHead>
+                  <TableHead className="text-muted-foreground">Items</TableHead>
+                  <TableHead className="text-muted-foreground">Amount</TableHead>
+                  <TableHead className="text-muted-foreground">Date</TableHead>
+                  <TableHead className="text-muted-foreground">Status</TableHead>
+                  <TableHead className="text-right text-muted-foreground">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {filteredOrders.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="px-6 py-8 text-center text-slate-500"
-                    >
-                      No orders found matching the selected filters.
-                    </td>
-                  </tr>
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No orders found.</p>
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   filteredOrders.map((order) => (
-                    <tr key={order.id} className="transition hover:bg-slate-50">
-                      <td className="px-6 py-4 text-sm font-medium text-slate-900">
-                        #{order.id}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-900">
-                        {order.userName}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-900">
-                        {order.email}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-purple-600">
-                        {order.items.length} item(s)
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-slate-900">
-                        ₹{order.totalAmount}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-500">
+                    <TableRow key={order.id} className="border-border/40 hover:bg-secondary/20">
+                      <TableCell>
+                        <span className="font-medium">#{order.id}</span>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{order.userName}</p>
+                          {order.email && <p className="text-sm text-muted-foreground">{order.email}</p>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="bg-primary/10 text-primary border-0">
+                          {order.items.length} item(s)
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-bold">₹{order.totalAmount.toLocaleString()}</span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
                         {order.orderDate}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            order.paymentStatus === "Paid"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-yellow-100 text-yellow-800"
-                          }`}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={order.paymentStatus === "Paid"
+                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                            : "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                          }
                         >
-                          {order.paymentStatus}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <button
+                          {order.paymentStatus === "Paid" ? (
+                            <><CheckCircle className="mr-1 h-3 w-3" /> Paid</>
+                          ) : (
+                            <><Clock className="mr-1 h-3 w-3" /> Pending</>
+                          )}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => setSelectedOrder(order)}
-                          className="text-purple-600 transition hover:text-purple-800"
+                          className="hover:bg-primary/10 hover:text-primary"
                         >
-                          View Details
-                        </button>
-                      </td>
-                    </tr>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
-              </tbody>
-            </table>
-          </div>
-        )}{" "}
-      </div>
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Order Details Modal */}
-      {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-900 to-slate-800 px-6 py-4 text-white">
-              <h3 className="text-xl font-semibold">
-                Order #{selectedOrder.id}
-              </h3>
-              <button
-                onClick={() => setSelectedOrder(null)}
-                className="text-2xl leading-none text-white/70 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
+      {/* Order Details Dialog */}
+      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+        <DialogContent className="sm:max-w-[500px] bg-card border-border">
+          <DialogHeader>
+            <DialogTitle>Order #{selectedOrder?.id}</DialogTitle>
+            <DialogDescription>
+              Placed on {selectedOrder?.orderDate}
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="space-y-4 p-6">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <h4 className="mb-3 font-semibold text-slate-900">
-                  Customer Details
-                </h4>
-                <div className="space-y-1 text-sm">
-                  <p>
-                    <strong className="text-slate-700">Name:</strong>{" "}
-                    <span className="text-slate-900">
-                      {selectedOrder.userName}
-                    </span>
-                  </p>
-                  <p>
-                    <strong className="text-slate-700">Email:</strong>{" "}
-                    <span className="text-slate-900">
-                      {selectedOrder.email}
-                    </span>
-                  </p>
-                  <p>
-                    <strong className="text-slate-700">Phone:</strong>{" "}
-                    <span className="text-slate-900">
-                      {selectedOrder.phone}
-                    </span>
-                  </p>
-                  <p>
-                    <strong className="text-slate-700">Order Date:</strong>{" "}
-                    <span className="text-slate-900">
-                      {selectedOrder.orderDate}
-                    </span>
-                  </p>
+          {selectedOrder && (
+            <div className="space-y-4">
+              {/* Customer Details */}
+              <div className="p-4 rounded-lg border border-border/50 bg-muted/30">
+                <h4 className="font-semibold mb-3 text-sm">Customer Details</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Name</p>
+                    <p className="font-medium">{selectedOrder.userName}</p>
+                  </div>
+                  {selectedOrder.email && (
+                    <div>
+                      <p className="text-muted-foreground">Email</p>
+                      <p className="font-medium">{selectedOrder.email}</p>
+                    </div>
+                  )}
+                  {selectedOrder.phone && (
+                    <div>
+                      <p className="text-muted-foreground">Phone</p>
+                      <p className="font-medium">{selectedOrder.phone}</p>
+                    </div>
+                  )}
+                  {selectedOrder.paymentMethod && (
+                    <div>
+                      <p className="text-muted-foreground">Payment Method</p>
+                      <p className="font-medium">{selectedOrder.paymentMethod}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
+              {/* Items */}
               <div>
-                <h4 className="mb-3 font-semibold text-slate-900">
-                  Items Ordered
-                </h4>
+                <h4 className="font-semibold mb-3 text-sm">Items Ordered</h4>
                 <div className="space-y-2">
                   {selectedOrder.items.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between rounded-lg border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-3"
-                    >
+                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/20">
                       <div>
-                        <p className="text-sm font-medium text-slate-900">
-                          {item.product}
-                        </p>
-                        <p className="text-xs text-slate-600">
-                          Size: {item.size} | Qty: {item.quantity}
+                        <p className="font-medium">{item.product}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Size: {item.size} • Qty: {item.quantity}
                         </p>
                       </div>
-                      <p className="text-sm font-semibold text-purple-700">
-                        ₹{item.price * item.quantity}
-                      </p>
+                      <p className="font-bold text-primary">₹{item.price * item.quantity}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="font-semibold text-slate-900">
-                    Total Amount:
-                  </span>
-                  <span className="text-xl font-bold text-purple-700">
-                    ₹{selectedOrder.totalAmount}
-                  </span>
+              {/* Total */}
+              <div className="p-4 rounded-lg border border-primary/30 bg-primary/5">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium">Total Amount</span>
+                  <span className="text-xl font-bold">₹{selectedOrder.totalAmount.toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-slate-900">
-                    Payment Status:
-                  </span>
-                  <span
-                    className={`rounded-full px-3 py-1 text-sm font-semibold ${
-                      selectedOrder.paymentStatus === "Paid"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-yellow-100 text-yellow-800"
-                    }`}
+                  <span className="font-medium">Payment Status</span>
+                  <Badge
+                    className={selectedOrder.paymentStatus === "Paid"
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                      : "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                    }
                   >
                     {selectedOrder.paymentStatus}
-                  </span>
+                  </Badge>
                 </div>
               </div>
-
-              <button
-                onClick={() => setSelectedOrder(null)}
-                className="w-full rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:from-purple-500 hover:to-indigo-500"
-              >
-                Close
-              </button>
             </div>
-          </div>
-        </div>
-      )}
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedOrder(null)} className="border-border/50">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
