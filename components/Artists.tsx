@@ -280,14 +280,18 @@ export default function ArtistsSection() {
           />
         </svg>
 
-        <h1
-          id="artistsTitle"
-          className="font-joker absolute top-[10svh] w-full text-[clamp(2.5rem,10vw,6rem)] px-8 leading-none text-white lowercase text-center pt-4"
-        >
-          ARTISTS
-        </h1>
+        {/* Title at top */}
+        <div className="flex-shrink-0 pt-6 sm:pt-8 pb-4">
+          <h1
+            id="artistsTitle"
+            className="font-joker text-[clamp(2.5rem,10vw,6rem)] px-8 leading-none text-white lowercase text-center"
+          >
+            ARTISTS
+          </h1>
+        </div>
 
-        <div className="carousel relative flex-1 min-h-0 flex items-center justify-center pb-[2svh]">
+        {/* Carousel - Center area */}
+        <div className="carousel relative flex-1 min-h-0 flex items-center justify-center">
           {/* White line through center - Perfectly centered */}
           <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] bg-white z-0"></div>
 
@@ -329,11 +333,11 @@ export default function ArtistsSection() {
                     style={{
                       width:
                         i === currentIndex
-                          ? "clamp(200px, 50vw, 520px)"
+                          ? "clamp(180px, 45vw, 480px)"
                           : "clamp(120px, 25vw, 230px)",
                       height:
                         i === currentIndex
-                          ? "clamp(150px, 40vw, 420px)"
+                          ? "clamp(120px, 35vw, 390px)"
                           : "clamp(90px, 25vw, 230px)",
                     }}
                     sizes="(max-width: 768px) 80vw, 520px"
@@ -343,47 +347,31 @@ export default function ArtistsSection() {
             ))}
           </div>
 
-          <div
-            className="absolute left-1/2 -translate-x-1/2 w-full max-w-md justify-center flex items-center px-4"
-            style={{
-              top: "calc(50% + clamp(150px, 40vw, 420px) / 2 + 20px)",
-            }}
-          >
-            <div className="border-t-2 w-full border-b-2 border-white py-3 px-6 text-center text-white bg-black/50 backdrop-blur-sm">
-              <h2 className="text-2xl md:text-4xl font-jqka uppercase">
-                {artists[currentIndex].name}
-              </h2>
-              <p className="text-base font-jqka md:text-2xl">
-                {artists[currentIndex].date}
-              </p>
-            </div>
-          </div>
-
           {/* Navigation buttons */}
           <button
             className="
-              group
-              absolute top-1/2 -translate-y-1/2
-              flex items-center justify-center
-              bg-red-600 hover:bg-white
-              transition-colors duration-400
-              z-20 cursor-pointer
-            "
+          group
+          absolute top-1/2 -translate-y-1/2
+          flex items-center justify-center
+          bg-red-600 hover:bg-white
+          transition-colors duration-400
+          z-20 cursor-pointer
+        "
             onClick={nextArtist}
             style={{
               width: "clamp(32px, 6vw, 62px)",
               height: "clamp(28px, 5vw, 54px)",
-              left: "calc(clamp(200px, 50vw, 520px)/2 + 50%)",
+              left: "calc(clamp(180px, 45vw, 480px)/2 + 50%)",
             }}
             aria-label="Next artist"
           >
             <div
               className="
-                bg-white
-                group-hover:bg-red-600
-                transition-colors duration-400
-                rotate-90
-              "
+            bg-white
+            group-hover:bg-red-600
+            transition-colors duration-400
+            rotate-90
+          "
               style={{
                 width: "clamp(14px, 2.5vw, 33px)",
                 height: "clamp(10px, 1.8vw, 22px)",
@@ -394,28 +382,28 @@ export default function ArtistsSection() {
 
           <button
             className="
-              group
-              absolute top-1/2 -translate-y-1/2
-              flex items-center justify-center
-              bg-red-600 hover:bg-white
-              transition-colors duration-400
-              z-20 cursor-pointer
-            "
+          group
+          absolute top-1/2 -translate-y-1/2
+          flex items-center justify-center
+          bg-red-600 hover:bg-white
+          transition-colors duration-400
+          z-20 cursor-pointer
+        "
             onClick={prevArtist}
             style={{
               width: "clamp(32px, 6vw, 62px)",
               height: "clamp(28px, 5vw, 54px)",
-              right: "calc(clamp(200px, 50vw, 520px)/2 + 50%)",
+              right: "calc(clamp(180px, 45vw, 480px)/2 + 50%)",
             }}
             aria-label="Previous artist"
           >
             <div
               className="
-                bg-white
-                group-hover:bg-red-600
-                transition-colors duration-400
-                -rotate-90
-              "
+            bg-white
+            group-hover:bg-red-600
+            transition-colors duration-400
+            -rotate-90
+          "
               style={{
                 width: "clamp(14px, 2.5vw, 33px)",
                 height: "clamp(10px, 1.8vw, 22px)",
@@ -423,6 +411,18 @@ export default function ArtistsSection() {
               }}
             />
           </button>
+        </div>
+
+        {/* Artist Info at bottom */}
+        <div className="flex-shrink-0 pb-6 sm:pb-8 pt-4 flex justify-center px-4 mb-8">
+          <div className="border-t-2 border-b-2 border-white py-3 px-6 text-center text-white bg-black/50 backdrop-blur-sm w-full max-w-md">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-jqka uppercase">
+              {artists[currentIndex].name}
+            </h2>
+            <p className="text-sm sm:text-base md:text-xl font-jqka">
+              {artists[currentIndex].date}
+            </p>
+          </div>
         </div>
       </div>
     </div>

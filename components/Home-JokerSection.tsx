@@ -29,7 +29,6 @@ export default function JokerSection({
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const scrollHintRef = useRef<HTMLDivElement>(null);
   const exploreTitleRef = useRef<HTMLHeadingElement>(null);
-  const jokerTlRef = useRef<gsap.core.Timeline | null>(null);
 
   const generateViewportPath = useCallback(() => {
     if (typeof window === "undefined") return "";
@@ -56,90 +55,7 @@ export default function JokerSection({
     }
   }, [generateViewportPath]);
 
-  const setupCardHoverAnimations = useCallback(() => {
-    const cards = document.querySelectorAll(".card-container");
-    const cardState = new WeakMap();
 
-    cards.forEach((card) => {
-      const inner = card.querySelector(".card-inner") as HTMLElement;
-      if (!inner) return;
-
-      let hoverDidFlip = false;
-      let preHoverRotation = 0;
-      let hoverLockedUntilLeave = false;
-
-      card.addEventListener("mouseenter", () => {
-        if (hoverLockedUntilLeave) return;
-
-        const currentRotation = gsap.getProperty(inner, "rotateY") as number;
-        const normalized = ((currentRotation % 360) + 360) % 360;
-        const isFullyBack = Math.abs(normalized - 180) < 5;
-
-        if (isFullyBack) {
-          hoverDidFlip = false;
-          return;
-        }
-
-        hoverDidFlip = true;
-        preHoverRotation = currentRotation;
-
-        gsap.to(inner, {
-          rotateY: 180,
-          duration: 0.3,
-          ease: "power2.inOut",
-          overwrite: "auto",
-        });
-      });
-
-      card.addEventListener("mouseleave", () => {
-        hoverLockedUntilLeave = false;
-
-        if (!hoverDidFlip) return;
-
-        // Check if we are "done" (revealed). If so, stay at 180.
-        // If not, revert to 0.
-        const progress = jokerTlRef.current?.progress() ?? 0;
-        // Consider it revealed if we are > 90% through the timeline
-        const isRevealed = progress > 0.9;
-
-        gsap.to(inner, {
-          rotateY: isRevealed ? 180 : 0,
-          duration: 0.5,
-          ease: "power2.out",
-          overwrite: "auto",
-        });
-
-        hoverDidFlip = false;
-      });
-
-      ScrollTrigger.addEventListener("scrollStart", () => {
-        if (!hoverDidFlip) return;
-
-        hoverLockedUntilLeave = true;
-        hoverDidFlip = false;
-
-        gsap.to(inner, {
-          rotateY: preHoverRotation,
-          duration: 0.4,
-          ease: "power2.out",
-          overwrite: "auto",
-        });
-      });
-
-      cardState.set(inner, {
-        hovering: false,
-        lastScrollRotation: 0,
-      });
-    });
-
-    ScrollTrigger.addEventListener("scrollEnd", () => {
-      document.querySelectorAll(".card-inner").forEach((inner) => {
-        const state = cardState.get(inner);
-        if (!state || !state.hovering) return;
-        state.lastScrollRotation = gsap.getProperty(inner, "rotateY") as number;
-      });
-    });
-  }, []);
 
   useEffect(() => {
     if (
@@ -202,9 +118,6 @@ export default function JokerSection({
             jokerDot.style.opacity = "0";
             const artistDot = document.getElementById("artistPathDot");
             if (artistDot) artistDot.style.opacity = "1";
-
-            // Force cards to be revealed state when we leave the section
-            gsap.set(".card-inner", { rotateY: 180, overwrite: "auto" });
           },
           onEnterBack: () => {
             jokerDot.style.opacity = "1";
@@ -313,7 +226,7 @@ export default function JokerSection({
 
         if (isMobile) {
           const spread = Math.min(vw * 0.4, 160);
-          return (((i ? i : 0) - 1.5)) * (spread / 2.5);
+          return (((i > 1 ? 3.7 : 1.2) - 2.2)) * (spread / 2.5);
         } else if (isTablet) {
           const spread = Math.min(vw * 0.4, 290);
 
@@ -336,7 +249,7 @@ export default function JokerSection({
         const isother = window.innerWidth < 1000;
 
         if (isMobile) {
-          const mobileStagger = [-0.18, 0.1, -0.1, 0.15];
+          const mobileStagger = [-0.18, 0.15, 0, 0.3];
           return mobileStagger[i] * vh;
         } else if (isTablet) {
           const TabletStagger = [0.07, -0.1, 0.07, -0.07];
@@ -355,7 +268,7 @@ export default function JokerSection({
         const isTablet = window.innerWidth < 769;
 
         if (isMobile) {
-          return [-10, -5, 15, 0][i];
+          return [-15, -10, 10, 15][i];
         }
         if (isTablet) {
           return [-15, 10, 5, 15][i];
@@ -390,14 +303,14 @@ export default function JokerSection({
             duration: 1,
             stagger: 1,
             ease: "power1.inOut",
-          },
-          "+=0.5"
-        );
+          }
+        )
+        .to(shuffledCards, {
+          duration: 1,
+          ease: "none",
+        });
 
-      // Store ref for hover checks
-      jokerTlRef.current = jokerTl;
 
-      setupCardHoverAnimations();
 
       const handleResize = () => {
         const newPath = generateViewportPath();
@@ -419,7 +332,7 @@ export default function JokerSection({
         });
       };
     }
-  }, [generateViewportPath, setupCardHoverAnimations, setShowNavbar]);
+  }, [generateViewportPath, setShowNavbar]);
 
   useEffect(() => {
     setupPaths();
@@ -568,7 +481,7 @@ export default function JokerSection({
                 explore events
               </h1>
 
-              <svg
+              {<svg
                 id="jokerPath"
                 width="100%"
                 height="100%"
@@ -585,7 +498,7 @@ export default function JokerSection({
                   fill="none"
                   ref={jokerPathRef}
                 />
-              </svg>
+              </svg>}
 
               <div
                 id="jokerPathDot"
