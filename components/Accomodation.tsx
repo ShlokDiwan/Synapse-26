@@ -134,7 +134,7 @@ export function AccommodationComponent() {
   };
 
   return (
-    <div className="min-h-[100svh] bg-black text-white font-jqka">
+    <div className="min-h-[100dvh] bg-black text-white font-jqka">
       {/* Header */}
       <div className="pb-6 md:pb-8 text-center px-4">
         <h1 className="pt-5 text-3xl md:text-6xl lg:text-8xl font-joker mb-2">accommodation</h1>

@@ -16,10 +16,10 @@ export default function MerchPage() {
   ];
 
   return (
-    <div className="w-full bg-black text-white min-h-[100svh]">
+    <div className="w-full bg-black text-white min-h-[100dvh]">
 
       {/* HERO */}
-      <div className="relative w-full h-[clamp(320px,55svh,520px)] overflow-hidden">
+      <div className="relative w-full h-[clamp(320px,55dvh,520px)] overflow-hidden">
         <Navbar visible={true}>
           <NavigationPanel />
         </Navbar>

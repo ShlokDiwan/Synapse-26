@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 
 import HeroSection from "@/components/Hero-Section";

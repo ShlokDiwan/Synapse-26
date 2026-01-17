@@ -390,7 +390,7 @@ export default function JokerSection() {
         });
       };
     }
-  }, [generateViewportPath]);
+  }, [generateViewportPath, setupCardHoverAnimations]);
 
   useEffect(() => {
     setupPaths();

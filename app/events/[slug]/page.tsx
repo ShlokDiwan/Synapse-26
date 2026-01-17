@@ -15,7 +15,7 @@ export default function EventDetailPage() {
   if (!page) return notFound();
 
   return (
-    <main className="bg-black text-white min-h-[100svh] overflow-x-hidden">
+    <main className="bg-black text-white min-h-[100dvh] overflow-x-hidden">
 
       <Navbar visible={true}>
         <NavigationPanel />
@@ -23,7 +23,7 @@ export default function EventDetailPage() {
 
 
       {/* TRIANGLE HEADER */}
-      <header className="relative w-full h-[55svh] min-h-[520px]">
+      <header className="relative w-full h-[55dvh] min-h-[520px]">
         <Image
           src="/images_events/upper.png"
           alt=""

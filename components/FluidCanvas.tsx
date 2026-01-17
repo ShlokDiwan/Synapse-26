@@ -17,7 +17,7 @@ const FluidCanvas: FC<FluidCanvasProps> = ({ className }) => {
         position: "fixed",
         inset: 0,
         width: "100vw",
-        height: "100svh",
+        height: "100vh",
 
         zIndex: 9999,
         mixBlendMode: "lighten",
