@@ -1,7 +1,14 @@
-import { checkAdminFromRequest } from "@/lib/checkAdmin";
 import { corsHeaders, handleCorsResponse, addCorsHeaders } from "@/lib/cors";
 import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
+
+async function checkAdmin(supabase: any) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return false;
+  return user.email === process.env.ADMIN_EMAIL;
+}
 
 // Handle CORS preflight requests
 export async function OPTIONS(request: Request) {

@@ -192,6 +192,10 @@ export async function PUT(request: Request) {
 
   if (!(await checkAdmin(supabase))) {
     const response = NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  const supabase = (await createClient()) as any;
+
+  if (!(await checkAdmin(supabase))) {
+    const response = NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     return addCorsHeaders(response, origin);
   }
 
@@ -267,6 +271,10 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   const origin = request.headers.get("origin");
+  const supabase = (await createClient()) as any;
+
+  if (!(await checkAdmin(supabase))) {
+    const response = NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   const supabase = (await createClient()) as any;
 
   if (!(await checkAdmin(supabase))) {
