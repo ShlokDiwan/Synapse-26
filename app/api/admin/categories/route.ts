@@ -1,6 +1,7 @@
 import { corsHeaders, handleCorsResponse, addCorsHeaders } from "@/lib/cors";
 import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
+import { uploadImage, editImage, deleteImage } from "@/lib/imageUtil";
 
 async function checkAdmin(supabase: any) {
   const {
