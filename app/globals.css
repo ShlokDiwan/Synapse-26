@@ -114,17 +114,13 @@
   --brand-gray-light: #6b7280;
 
   /* Gradient shortcuts */
-  --gradient-primary: linear-gradient(
-    135deg,
-    var(--brand-purple) 0%,
-    var(--brand-pink) 50%,
-    var(--brand-red) 100%
-  );
-  --gradient-accent: linear-gradient(
-    135deg,
-    var(--brand-yellow) 0%,
-    #fbbf24 100%
-  );
+  --gradient-primary: linear-gradient(135deg,
+      var(--brand-purple) 0%,
+      var(--brand-pink) 50%,
+      var(--brand-red) 100%);
+  --gradient-accent: linear-gradient(135deg,
+      var(--brand-yellow) 0%,
+      #fbbf24 100%);
 }
 
 ::-webkit-scrollbar {
@@ -140,9 +136,19 @@
   -ms-overflow-style: none;
 }
 
+/* Removed Lenis auto-height rules as we are using wrapper mode */
 html.lenis,
 html.lenis body {
+  height: 100%;
+}
+
+/* Strict Viewport Lock */
+html,
+body {
   height: auto;
+  width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior: none;
 }
 
 .lenis.lenis-smooth {

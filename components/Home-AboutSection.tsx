@@ -47,7 +47,6 @@ export default function AboutSection() {
     });
   }, []);
 
-  /* ---------------- IMAGE POSITIONING (UNCHANGED) ---------------- */
   const positionImageFromGradientCenter = useCallback(() => {
     const section = aboutSectionRef.current;
     const image = singleCardRef.current;

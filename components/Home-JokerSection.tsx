@@ -381,14 +381,13 @@ export default function JokerSection({
           {
             rotateY: 180,
             duration: 1,
-            stagger: 2,
+            stagger: 1,
             ease: "power1.inOut",
           },
           "+=0.5"
         )
-        .to(shuffledCards, {
-          duration: 1,
-          ease: "none",
+        .call(() => {
+          gsap.set(".card-inner", { rotateY: 180, overwrite: "auto" });
         });
 
       setupCardHoverAnimations();

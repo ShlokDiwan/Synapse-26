@@ -346,10 +346,11 @@ export default function HeroSection({
         trigger: heroRef.current,
         start: "top top",
         end: "+=300%",
-        scrub: 2.5,
+        scrub: 0.5,
         pin: true,
         pinSpacing: false,
         anticipatePin: 1.2,
+        preventOverlaps: true,
         onUpdate: (self) => {
           if (self.progress > 0.35 && self.progress < 0.5) {
             setPart3Active(true);
@@ -359,6 +360,7 @@ export default function HeroSection({
         },
       },
     });
+
     masterTLRef.current = masterTL;
 
     masterTL.set("#part3_2", {
@@ -554,7 +556,6 @@ export default function HeroSection({
         },
         "together2"
       )
-      .to(".screen-container", { duration: 1, ease: "none" });
   }, []);
 
   const initScrollProgress = useCallback(() => {
@@ -761,7 +762,7 @@ export default function HeroSection({
           }}>
             <img id="coloredImage" src="/images_home/RedHand2.jpeg" alt="Red Hand" ref={coloredImageRef} className="absolute inset-0 h-full w-full object-contain max-[600px]:rotate-270 min-[1000px]:object-cover pointer-events-none max-[600px]:scale-250" />
 
-            <div id="flipCard" className="absolute inset-0 transform-3d" ref={flipCardRef}>
+            <div id="flipCard" className="absolute inset-0 transform-3d will-change-transform" ref={flipCardRef}>
               <img id="redCard" className="absolute inset-0 w-full h-full object-contain max-[600px]:rotate-270 min-[1000px]:object-cover pointer-events-none backface-hidden max-[600px]:scale-250" src="/images_home/redcard4.png" alt="Red Card" ref={cardRef} />
 
               <div id="part3_2" ref={part3_2Ref} style={{
