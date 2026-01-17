@@ -55,7 +55,7 @@ export default function EventsPage() {
   return (
     <main className="bg-black text-white overflow-x-hidden">
       {/* HERO */}
-      <section className="relative h-[45dvh] w-full">
+      <section className="relative h-[45svh] w-full">
         <Image
           src="/top.jpg"
           alt="Events"
@@ -94,9 +94,8 @@ export default function EventsPage() {
                 <div key={event.slug} className="flex justify-center">
                   <div
                     onClick={() => handleCardClick(event.slug)}
-                    className={`relative w-[700px] h-[600px] cursor-pointer ${
-                      isFlipped ? "group" : ""
-                    }`}
+                    className={`relative w-[700px] h-[600px] cursor-pointer ${isFlipped ? "group" : ""
+                      }`}
                     style={{ perspective: "1500px" }}
                   >
                     <div

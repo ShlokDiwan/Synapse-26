@@ -130,25 +130,16 @@
 
 * {
   scrollbar-width: none;
+  box-sizing: border-box;
 }
 
 * {
   -ms-overflow-style: none;
 }
 
-/* Removed Lenis auto-height rules as we are using wrapper mode */
 html.lenis,
 html.lenis body {
-  height: 100%;
-}
-
-/* Strict Viewport Lock */
-html,
-body {
   height: auto;
-  width: 100%;
-  overflow-x: hidden;
-  overscroll-behavior: none;
 }
 
 .lenis.lenis-smooth {

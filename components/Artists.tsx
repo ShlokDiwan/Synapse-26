@@ -257,7 +257,7 @@ export default function ArtistsSection() {
       id="artistsSection"
       ref={artistSectionRef}
       style={{
-        height: "calc(100dvh + clamp(3rem, 12vw, 7.5rem) + clamp(120px, 15dvh, 200px) + 150px)",
+        height: "100svh",
       }}
     >
       <div className="artists-content relative top-[-1.6px] right-[-1px] h-full flex flex-col">
@@ -282,12 +282,12 @@ export default function ArtistsSection() {
 
         <h1
           id="artistsTitle"
-          className="font-joker absolute top-20 sm:top-10  w-full text-[clamp(2.5rem,10vw,6rem)] px-8 leading-none text-white lowercase text-center pt-4"
+          className="font-joker absolute top-[10svh] w-full text-[clamp(2.5rem,10vw,6rem)] px-8 leading-none text-white lowercase text-center pt-4"
         >
           ARTISTS
         </h1>
 
-        <div className="carousel relative flex-1 min-h-0 flex items-center justify-center pb-[2dvh]">
+        <div className="carousel relative flex-1 min-h-0 flex items-center justify-center pb-[2svh]">
           {/* White line through center - Perfectly centered */}
           <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] bg-white z-0"></div>
 
@@ -346,7 +346,7 @@ export default function ArtistsSection() {
           <div
             className="absolute left-1/2 -translate-x-1/2 w-full max-w-md justify-center flex items-center px-4"
             style={{
-              top: "calc(50% + clamp(150px, 40vw, 420px) / 2 + 30px)",
+              top: "calc(50% + clamp(150px, 40vw, 420px) / 2 + 20px)",
             }}
           >
             <div className="border-t-2 w-full border-b-2 border-white py-3 px-6 text-center text-white bg-black/50 backdrop-blur-sm">

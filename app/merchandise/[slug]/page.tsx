@@ -41,7 +41,7 @@ export default function ProductPage() {
   const images = product.images;
 
   return (
-    <div className="w-full bg-black text-white min-h-[100dvh] pt-20">
+    <div className="w-full bg-black text-white min-h-[100svh] pt-20">
       <Navbar visible={true}>
         <NavigationPanel />
       </Navbar>

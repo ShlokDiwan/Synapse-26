@@ -121,7 +121,7 @@ export default function AboutSection() {
       scrollTrigger: {
         trigger: ".part3_end",
         start: "top center",
-        end: "top center-=10%",
+        end: "top center-=30%",
         scrub: 2,
         anticipatePin: 1,
         invalidateOnRefresh: true,
@@ -151,6 +151,7 @@ export default function AboutSection() {
       ease: "power3.out",
       scrollTrigger: {
         trigger: ".part3_end",
+        // Sync triggers with visual position
         start: "top center-=5%",
         end: "top center-=15%",
         scrub: 2,
@@ -185,7 +186,7 @@ export default function AboutSection() {
   return (
     <section
       ref={aboutSectionRef}
-      className="part3_end relative min-h-[100dvh] w-full
+      className="part3_end relative min-h-[100svh] w-full
                     flex flex-col
                     px-[clamp(1.5rem,4vw,3.75rem)]
                     py-[clamp(1.2rem,5vh,5rem)]
