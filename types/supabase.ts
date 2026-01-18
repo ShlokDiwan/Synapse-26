@@ -14,6 +14,53 @@ export type Database = {
   };
   public: {
     Tables: {
+      accommodation_bookings: {
+        Row: {
+          booking_id: number;
+          user_id: string | null;
+          check_in: string | null;
+          check_out: string | null;
+          nights: number;
+          amount: number;
+          razorpay_order_id: string | null;
+          razorpay_payment_id: string | null;
+          payment_status: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          booking_id?: number;
+          user_id?: string | null;
+          check_in?: string | null;
+          check_out?: string | null;
+          nights: number;
+          amount: number;
+          razorpay_order_id?: string | null;
+          razorpay_payment_id?: string | null;
+          payment_status?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          booking_id?: number;
+          user_id?: string | null;
+          check_in?: string | null;
+          check_out?: string | null;
+          nights?: number;
+          amount?: number;
+          razorpay_order_id?: string | null;
+          razorpay_payment_id?: string | null;
+          payment_status?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "accommodation_bookings_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      },
       accommodation_type: {
         Row: {
           description: string | null;

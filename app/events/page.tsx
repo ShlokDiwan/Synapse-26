@@ -87,8 +87,8 @@ export default function EventsPage() {
               👁 Reveal / Unreveal all
             </button>
 
-            <div className="text-xs sm:text-base md:text-lg opacity-60 mb-3">
-              Hover to reveal • Click to explore
+            <div className="text-xs sm:text-base md:text-lg opacity-60 mb-3 flex">
+              <span className="hidden md:flex">Hover to reveal •</span> Click to explore
             </div>
           </div>
 
@@ -105,7 +105,6 @@ export default function EventsPage() {
                   <div className="flex justify-center items-center h-full">
                     <div
                       onMouseEnter={() => revealCard(event.slug)}
-                      onClick={() => handleCardClick(event.slug, isFlipped)}
                       className="relative cursor-pointer transform-gpu"
                       style={{ perspective: "1500px" }}
                     >
@@ -137,7 +136,11 @@ export default function EventsPage() {
 
                           {/* BACK */}
                           <div
-                            className="absolute inset-0 rounded-lg overflow-hidden"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCardClick(event.slug, isFlipped);
+                            }}
+                            className="absolute inset-0 rounded-lg overflow-hidden cursor-pointer"
                             style={{
                               backfaceVisibility: "hidden",
                               transform: "rotateY(180deg)",

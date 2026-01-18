@@ -1,11 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import type { EventCard } from "./eventcontent";
 
 export default function EventCards({ cards }: { cards: EventCard[] }) {
-  const [active, setActive] = useState<EventCard | null>(null);
+  const router = useRouter();
+  const params = useParams();
+  const currentSlug = params?.slug as string;
+
+  const handleRegisterClick = (cardName: string) => {
+    // Slugify the event name for the URL
+    // e.g. "Battle of Bands" -> "battle-of-bands"
+    const eventSlug = cardName.toLowerCase().replace(/\s+/g, "-");
+    router.push(`/events/${currentSlug}/${eventSlug}`);
+  };
 
   return (
     <>
@@ -46,7 +55,7 @@ export default function EventCards({ cards }: { cards: EventCard[] }) {
               {/* FOOTER */}
               <div className="p-5 pt-0">
                 <button
-                  onClick={() => setActive(card)}
+                  onClick={() => handleRegisterClick(card.name)}
                   className="
                     w-full h-[52px]
                     bg-white text-black
@@ -62,62 +71,6 @@ export default function EventCards({ cards }: { cards: EventCard[] }) {
           ))}
         </div>
       </section>
-
-      {/* MODAL (EXACT ORIGINAL BEHAVIOR) */}
-      {active && (
-        <div
-          className="fixed inset-0 bg-black/70 z-[1000]
-                     flex items-center justify-center"
-          onClick={() => setActive(null)}
-        >
-          <div
-            className="bg-[#111] text-white p-6 rounded-md
-                       w-[90%] max-w-[480px] relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* CLOSE */}
-            <button
-              onClick={() => setActive(null)}
-              className="absolute top-3 right-4 text-xl cursor-pointer"
-            >
-              ×
-            </button>
-
-            {/* TITLE */}
-            <h2 className="font-adventor text-[28px] mb-2">{active.name}</h2>
-
-            {/* PRICE */}
-            <p className="text-[#c0c0c0] mb-3">{active.price}</p>
-
-            {/* RULES */}
-            <ul className="list-disc pl-5 text-sm mb-6 space-y-1">
-              {active.rules.map((rule, i) => (
-                <li key={i}>{rule}</li>
-              ))}
-            </ul>
-
-            {/* ACTIONS */}
-            <div className="flex justify-end gap-3">
-              <button
-                className="px-4 py-2 border border-white/30 rounded"
-                onClick={() => setActive(null)}
-              >
-                Cancel
-              </button>
-
-              <button
-                className="px-4 py-2 bg-[#b41c32] rounded cursor-pointer"
-                onClick={() => {
-                  alert("Payment Gateway to be integrated");
-                  setActive(null);
-                }}
-              >
-                Proceed to Pay
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
