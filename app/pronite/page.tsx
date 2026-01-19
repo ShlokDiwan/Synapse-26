@@ -8,6 +8,7 @@ import Footer from "@/components/ui/Footer";
 import { Navbar, NavbarButton } from "@/components/ui/Resizable-navbar";
 import NavigationPanel from "@/components/ui/NavigationPanel";
 import { useAuth } from "@/hooks/useAuth";
+import TextReveal from "@/components/TextReveal";
 
 export default function PronitePage() {
   const { isAuthenticated } = useAuth();
@@ -22,17 +23,16 @@ export default function PronitePage() {
       <ProniteHero />
 
       {/* Stacked Carousel Section */}
-      <section className="bg-black py-20">
+      <section className="bg-black">
         <ArtistCarousel />
       </section>
 
       {/* Quote Section */}
-      <section className="bg-black py-32 px-4 border-y border-white/5">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-[clamp(1.5rem,4vw,3.5rem)] font-jqka font-medium leading-[1.4] uppercase tracking-tight">
-            Synapse is a living celebration of music, art, and creativity,
-            brought to life through performances, people, and passion.
-          </h2>
+      <section className="bg-black pt-10 pb-40 px-4 border-y border-white/5">
+        <div className="max-w-5xl mx-auto text-center">
+          <TextReveal
+            text="Synapse is a living celebration of music, art, and creativity, brought to life through performances, people, and passion."
+          />
         </div>
       </section>
 
@@ -41,7 +41,7 @@ export default function PronitePage() {
 
       {/* Registration Section */}
       <section className="bg-black py-40 px-4 text-center">
-        <h1 className="text-[clamp(3.5rem,15vw,10rem)] font-joker leading-none mb-4 uppercase">
+        <h1 className="text-[clamp(3.5rem,15vw,10rem)] font-texgyreadventor leading-none mb-4">
           Join the <br /> Celebration
         </h1>
         <p className="font-jqka text-lg md:text-xl text-gray-400 mb-12 max-w-2xl mx-auto">

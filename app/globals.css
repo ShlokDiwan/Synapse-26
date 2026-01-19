@@ -53,6 +53,7 @@
   --font-card: "CardCharacter", sans-serif;
   --font-joker: "Joker", sans-serif;
   --font-jqka: "jqka", sans-serif;
+  --font-texgyreadventor: "Texgyreadventor", sans-serif;
   --font-poppins: "Poppins", system-ui, sans-serif;
   --font-roboto: "Roboto", sans-serif;
   --color-background: var(--background);
@@ -169,6 +170,15 @@ html.lenis body {
   font-style: normal;
   font-display: swap;
 }
+
+@font-face {
+  font-family: "Texgyreadventor";
+  src: url("/fonts/texgyreadventor-regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 
 @font-face {
   font-family: "jqka";
