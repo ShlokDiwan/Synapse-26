@@ -1,11 +1,21 @@
 // app/events/[slug]/eventContent.ts
 
+export type EventFee = {
+  type: "solo" | "duet" | "group";
+  price: number;
+  min_members: number;
+  max_members: number;
+};
+
 export type EventCard = {
   image: string;
   name: string;
   description: string[];
+  // Deprecated string price, keeping for now or replacing usage
   price: string;
   rules: string[];
+  rulebook: string; // URL
+  fees: EventFee[];
 };
 
 export type EventPageConfig = {
@@ -31,6 +41,11 @@ export const EVENT_PAGES: Record<string, EventPageConfig> = {
           "Any dance style allowed",
           "Time limit will be strictly enforced",
         ],
+        rulebook: "https://docs.google.com/document/d/1zo3Cqd1jtG_KNKgIZ6OCSu2CPAZNV2WWh7HQqFgTeDQ/edit?usp=drivesdk", // Placeholder or actual link
+        fees: [
+          { type: "group", price: 300, min_members: 2, max_members: 4 },
+          { type: "duet", price: 200, min_members: 2, max_members: 2 }
+        ]
       },
       {
         image: "/images_events/dance/2.png",
@@ -44,6 +59,10 @@ export const EVENT_PAGES: Record<string, EventPageConfig> = {
           "No explicit or offensive language",
           "Time limit: 2 minutes per round",
         ],
+        rulebook: "https://docs.google.com/document/d/1zo3Cqd1jtG_KNKgIZ6OCSu2CPAZNV2WWh7HQqFgTeDQ/edit?usp=drivesdk",
+        fees: [
+          { type: "solo", price: 200, min_members: 1, max_members: 1 }
+        ]
       },
       {
         image: "/images_events/dance/3.png",
@@ -55,6 +74,11 @@ export const EVENT_PAGES: Record<string, EventPageConfig> = {
           "DJ music only",
           "Judges' decision final",
         ],
+        rulebook: "https://docs.google.com/document/d/1zo3Cqd1jtG_KNKgIZ6OCSu2CPAZNV2WWh7HQqFgTeDQ/edit?usp=drivesdk",
+        fees: [
+          { type: "solo", price: 250, min_members: 1, max_members: 1 },
+          { type: "duet", price: 400, min_members: 2, max_members: 2 }
+        ]
       },
     ],
   },
@@ -74,6 +98,11 @@ export const EVENT_PAGES: Record<string, EventPageConfig> = {
           "At least one original composition preferred",
           "Time limit: 12 minutes including setup",
         ],
+        rulebook: "https://docs.google.com/document/d/1zo3Cqd1jtG_KNKgIZ6OCSu2CPAZNV2WWh7HQqFgTeDQ/edit?usp=drivesdk",
+        fees: [
+          { type: "group", price: 500, min_members: 3, max_members: 6 },
+          { type: "solo", price: 150, min_members: 1, max_members: 1 }
+        ]
       },
       {
         image: "/images_events/music/2.png",
@@ -85,6 +114,10 @@ export const EVENT_PAGES: Record<string, EventPageConfig> = {
           "Pre-mixed tracks not allowed",
           "Equipment must be approved beforehand",
         ],
+        rulebook: "https://docs.google.com/document/d/1zo3Cqd1jtG_KNKgIZ6OCSu2CPAZNV2WWh7HQqFgTeDQ/edit?usp=drivesdk",
+        fees: [
+          { type: "solo", price: 300, min_members: 1, max_members: 1 }
+        ]
       },
     ],
   },
@@ -106,6 +139,10 @@ export const EVENT_PAGES: Record<string, EventPageConfig> = {
           "Theme: High-fashion runway showcase",
           "At least one original design is mandatory",
         ],
+        rulebook: "https://docs.google.com/document/d/1zo3Cqd1jtG_KNKgIZ6OCSu2CPAZNV2WWh7HQqFgTeDQ/edit?usp=drivesdk",
+        fees: [
+          { type: "group", price: 300, min_members: 2, max_members: 4 }
+        ]
       },
       {
         image: "/images_events/fashion/2.png",
@@ -119,6 +156,10 @@ export const EVENT_PAGES: Record<string, EventPageConfig> = {
           "Characters must be recognizable",
           "Props must be safe and non-hazardous",
         ],
+        rulebook: "https://docs.google.com/document/d/1zo3Cqd1jtG_KNKgIZ6OCSu2CPAZNV2WWh7HQqFgTeDQ/edit?usp=drivesdk",
+        fees: [
+          { type: "solo", price: 250, min_members: 1, max_members: 1 }
+        ]
       },
     ],
   },
@@ -140,6 +181,10 @@ export const EVENT_PAGES: Record<string, EventPageConfig> = {
           "Time limit: 20 minutes",
           "Live acting only (no pre-recorded audio)",
         ],
+        rulebook: "https://docs.google.com/document/d/1zo3Cqd1jtG_KNKgIZ6OCSu2CPAZNV2WWh7HQqFgTeDQ/edit?usp=drivesdk",
+        fees: [
+          { type: "group", price: 400, min_members: 4, max_members: 8 }
+        ]
       },
       {
         image: "/images_events/theatre/2.png",
@@ -151,6 +196,10 @@ export const EVENT_PAGES: Record<string, EventPageConfig> = {
           "No microphones allowed",
           "Theme must convey a social message",
         ],
+        rulebook: "https://docs.google.com/document/d/1zo3Cqd1jtG_KNKgIZ6OCSu2CPAZNV2WWh7HQqFgTeDQ/edit?usp=drivesdk",
+        fees: [
+          { type: "group", price: 300, min_members: 1, max_members: 10 }
+        ]
       },
     ],
   },
@@ -169,7 +218,12 @@ export const EVENT_PAGES: Record<string, EventPageConfig> = {
           "Standard tournament rules apply",
           "No cheating or exploits",
         ],
+        rulebook: "https://docs.google.com/document/d/1zo3Cqd1jtG_KNKgIZ6OCSu2CPAZNV2WWh7HQqFgTeDQ/edit?usp=drivesdk",
+        fees: [
+          { type: "group", price: 500, min_members: 5, max_members: 5 }
+        ]
       },
     ],
   },
 };
+
