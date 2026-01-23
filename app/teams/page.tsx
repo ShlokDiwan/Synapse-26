@@ -82,8 +82,8 @@ export default function TeamPage() {
       name: "Priyanshi Chauhan", 
       position: "Design / UI Lead", 
       image: "/priyanshi_ws.png",
-      instagram: "https://instagram.com",
-      linkedin: "https://linkedin.com"
+      instagram: "https://www.instagram.com/priyaanshii.5?igsh=MWIxbzNiM3Fxb3d4cg==",
+      linkedin: "https://www.linkedin.com/in/priyanshichauhan01"
     },
   ]
 
@@ -97,13 +97,13 @@ export default function TeamPage() {
   ]
 
   const coreTeam: TeamMember[] = [
-    { name: "Devamm Patel", position: "Mentor", image: "/Devamm.png", instagram: "#", linkedin: "#" },
-    { name: "Harshali Dharmik", position: "Mentor", image: "/Harshali_img.jpg", instagram: "#", linkedin: "#" },
-    { name: "Vivek Chaudhari", position: "Mentor", image: "/Vivek_img.jpeg", instagram: "#", linkedin: "#" },
-    { name: "Dev Wadhvani", position: "Mentor", image: "/Dev_img.jpeg", instagram: "#", linkedin: "#" },
-    { name: "Sujal Manavadariya", position: "Mentor", image: "/Sujal_img.png", instagram: "#", linkedin: "#" },
-    { name: "Rishabh Jain", position: "Mentor", image: "/Rishabh_img.jpg", instagram: "#", linkedin: "#" },
-    { name: "Siddhant Gupta", position: "Mentor", image: "/Siddhant_img.jpeg", instagram: "#", linkedin: "#" },
+    { name: "Devamm Patel", position: "Mentor", image: "/Devamm.png", instagram: "https://www.instagram.com/_devamm_12/", linkedin: "https://in.linkedin.com/in/devamm-patel-197891265" },
+    { name: "Harshali Dharmik", position: "Mentor", image: "/Harshali_img.jpg", instagram: "https://www.instagram.com/harshali__2074/", linkedin: "https://in.linkedin.com/in/harshali-dharmik-a640b3284" },
+    { name: "Vivek Chaudhari", position: "Mentor", image: "/Vivek_img.jpeg", instagram: "https://www.instagram.com/vivek.chaudhari_30/", linkedin: "https://in.linkedin.com/in/vivek-kirankumar-chaudhari" },
+    { name: "Dev Wadhvani", position: "Mentor", image: "/Dev_img.jpeg", instagram: "https://www.instagram.com/devwadhvani/", linkedin: "https://in.linkedin.com/in/devwadhvani" },
+    { name: "Sujal Manavadariya", position: "Mentor", image: "/Sujal_img.png", instagram: "https://www.instagram.com/_sujalmanavadariya_/", linkedin: "https://in.linkedin.com/in/sujal-manavadariya-499992252" },
+    { name: "Rishabh Jain", position: "Mentor", image: "/Rishabh_img.jpg", instagram: "https://www.instagram.com/rishabhjain_149/", linkedin: "https://in.linkedin.com/in/jainrishabh04" },
+    { name: "Siddhant Gupta", position: "Mentor", image: "/Siddhant_img.jpeg", instagram: "https://www.instagram.com/siddhant_g86/", linkedin: "https://in.linkedin.com/in/siddhant-gupta-6327b4253" },
     { name: "Bhavya Shah", position: "Mentor", image: "/Bhavya_img.jpg", instagram: "https://www.instagram.com/bhavya_1918?igsh=b29ieW1oMTBtamhi&utm_source=qr", linkedin: "https://www.linkedin.com/in/bhavya3604?utm_source=share_via&utm_content=profile&utm_medium=member_ios" },
     { name: "Adhiraj Roy Chowdhury ", position: "Mentor", image: "/Adhiraj_img.jpg", instagram: "https://www.instagram.com/adhirajrc?igsh=MWUyNDIxNTdic3Zmbg==", linkedin: "https://www.linkedin.com/in/adhiraj-roy-chowdhury" },
     { name: "Kashish Khubchandani", position: "Mentor", image: "/Kashish_img.jpg", instagram: "https://www.instagram.com/_cutest_stranger/", linkedin: "http://www.linkedin.com/in/kashish-khubchandani-281b97235" },
@@ -120,7 +120,7 @@ export default function TeamPage() {
 
   const webTeam: TeamMember[] = [
     { name: "Chirayu Dodiya", position: "Backend Dev", image: "/chirayu_ws.jpg", instagram: "https://www.instagram.com/chirayu_dodiya/", linkedin: "https://www.linkedin.com/in/chirayu-dodiya-3a025a2aa/" },
-    { name: "Aditya Vaish", position: "Backend Dev", image: "/aditya_ws.jpg", instagram: "#", linkedin: "https://www.linkedin.com/in/aditya-vaish-370494243/" },
+    { name: "Aditya Vaish", position: "Backend Dev", image: "/aditya_ws.jpg", instagram: "https://www.instagram.com/_avaish_08?igsh=MWRmOTV4b2ZiNDRuMw==", linkedin: "https://www.linkedin.com/in/aditya-vaish-370494243/" },
     { name: "Neel Khatri", position: "Backend Dev", image: "/neel_ws.jpg", instagram: "https://www.instagram.com/neel212006", linkedin: "https://www.linkedin.com/in/neel-khatri-aa1618242" },
     { name: "Saumya Shah", position: "Backend Dev", image: "/saumya_ws.jpeg", instagram: "https://www.instagram.com/saumyashah05/", linkedin: "https://www.linkedin.com/in/saumya-shah-5bb8602b4/" },
     { name: "Dhruvil Patel", position: "Backend Dev", image: "/dhruvil_ws.jpeg", instagram: "https://www.instagram.com/dp_0205", linkedin: "https://www.linkedin.com/in/dhruvil05patel?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" },
